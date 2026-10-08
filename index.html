@@ -76,6 +76,18 @@ svg { display: block; }
 .text-btn:hover { color: var(--text); }
 .key-row { display: flex; justify-content: space-between; margin-top: 6px; }
 
+/* ---------- provider switch ---------- */
+.seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+}
+.seg button { border: 0; background: none; padding: 8px; border-radius: 8px; color: var(--muted); font-weight: 600; }
+.seg button:hover { color: var(--text); }
+.seg button.sel { background: var(--panel-3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+.provider-note { margin-top: 8px; }
+.provider-note.warn { color: var(--warn); }
+.provider-note code { font: 11.5px ui-monospace, Menlo, monospace; color: var(--text); }
+
 /* ---------- model dropdown ---------- */
 .dd { position: relative; }
 .dd-trigger {
@@ -208,6 +220,7 @@ svg { display: block; }
 .chip { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
 .chip.ok { color: var(--accent); border-color: rgba(143,194,58,.3); }
 .chip.bad { color: var(--danger); border-color: rgba(255,122,112,.3); }
+.chip.rep { color: #c9b2ff; border-color: rgba(201,178,255,.3); }
 .result-img {
   display: block; max-width: 100%; max-height: 560px; width: auto; height: auto; border-radius: 12px; cursor: zoom-in;
   background: var(--panel-2);
@@ -276,7 +289,13 @@ svg { display: block; }
       <div class="left-scroll">
 
         <div class="section">
-          <div class="label"><strong>API key</strong><a class="hint" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a key ↗</a></div>
+          <div class="label"><strong>Provider</strong></div>
+          <div class="seg" id="providerSeg"></div>
+          <div class="hint provider-note" id="providerNote" hidden></div>
+        </div>
+
+        <div class="section">
+          <div class="label"><strong id="keyLabel">API key</strong><a class="hint" id="keyLink" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a key ↗</a></div>
           <div class="field">
             <input id="apiKey" type="password" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false">
             <button class="icon-btn" id="toggleKey" title="Show / hide key" type="button"></button>
@@ -345,7 +364,7 @@ svg { display: block; }
             <button class="text-btn" id="resetCost" type="button" title="Reset all-time total">reset</button>
           </span>
         </div>
-        <div class="foot-note">Your API key stays in this browser (localStorage) and is sent only to generativelanguage.googleapis.com. Don't host this file publicly. Prices are estimates.</div>
+        <div class="foot-note">Your keys stay in this browser (localStorage) and are sent only to the selected provider (Google directly; Replicate through your local server.py). Don't host this file publicly. Prices are estimates.</div>
       </div>
     </aside>
 
@@ -380,12 +399,28 @@ svg { display: block; }
    - Prices: ai.google.dev/gemini-api/docs/pricing, USD per output image.
    ===================================================================== */
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+/* Replicate (checked 2026-10-08): input schema from replicate.com/<model>/api/schema,
+   prices from the model pages. api.replicate.com doesn't allow browser (CORS) requests,
+   so Replicate calls go through server.py when the page is served from localhost. */
+const ON_LOCALHOST = /^https?:$/.test(location.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const REPLICATE_API = ON_LOCALHOST ? '/replicate/v1/' : 'https://api.replicate.com/v1/';
+const REPLICATE_POLL_MS = 1500;
 const MODELS = [
-  { id: 'gemini-3.1-flash-image', label: 'Nano Banana 2',   short: 'nb2',   maxRefs: 14,
+  { provider: 'google', id: 'gemini-3.1-flash-image', label: 'Nano Banana 2',   short: 'nb2',   maxRefs: 14,
     price: { '1K': 0.067, '2K': 0.101, '4K': 0.151 } },
-  { id: 'gemini-3-pro-image',     label: 'Nano Banana Pro', short: 'nbpro', maxRefs: 14,
+  { provider: 'google', id: 'gemini-3-pro-image',     label: 'Nano Banana Pro', short: 'nbpro', maxRefs: 14,
     price: { '1K': 0.134, '2K': 0.134, '4K': 0.24 } },
+  { provider: 'replicate', id: 'google/nano-banana-2',   label: 'Nano Banana 2',   short: 'rep-nb2',   maxRefs: 14,
+    price: { '1K': 0.067, '2K': 0.101, '4K': 0.151 } },
+  { provider: 'replicate', id: 'google/nano-banana-pro', label: 'Nano Banana Pro', short: 'rep-nbpro', maxRefs: 14,
+    price: { '1K': 0.15, '2K': 0.15, '4K': 0.30 }, hasFallbackParam: true },
 ];
+const PROVIDERS = {
+  google: { label: 'Google', keyLabel: 'Gemini API key', storeKey: 'nbs.apiKey', placeholder: 'Paste your Gemini API key',
+    link: 'https://aistudio.google.com/apikey', linkText: 'Get a key ↗', defaultModel: 'gemini-3-pro-image' },
+  replicate: { label: 'Replicate', keyLabel: 'Replicate API token', storeKey: 'nbs.replicateToken', placeholder: 'r8_…',
+    link: 'https://replicate.com/account/api-tokens', linkText: 'Get a token ↗', defaultModel: 'google/nano-banana-pro' },
+};
 const RATIOS = ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '16:9', '9:16', '21:9'];
 const QUALITIES = [
   { size: '1K', name: 'Standard' },
@@ -540,13 +575,20 @@ navigator.storage?.persist?.().catch(() => {});
 
 /* ---------- state ---------- */
 const saved = store.get('nbs.settings', {});
+const validModel = (prov, id) => MODELS.some(m => m.provider === prov && m.id === id) ? id : PROVIDERS[prov].defaultModel;
 const S = {
-  model: MODELS.some(m => m.id === saved.model) ? saved.model : MODELS[1].id,
+  provider: PROVIDERS[saved.provider] ? saved.provider : 'google',
+  models: {
+    google: validModel('google', saved.models?.google ?? saved.model),
+    replicate: validModel('replicate', saved.models?.replicate),
+  },
   ratio: RATIOS.includes(saved.ratio) ? saved.ratio : 'auto',
   size: QUALITIES.some(q => q.size === saved.size) ? saved.size : '1K',
   format: saved.format === 'jpg' ? 'jpg' : 'png',
   saveToFolder: !!saved.saveToFolder,
 };
+// S.model = selected model of the active provider (non-enumerable, so not saved twice)
+Object.defineProperty(S, 'model', { get: () => S.models[S.provider], set: v => { S.models[S.provider] = v; } });
 const saveSettings = () => store.set('nbs.settings', S);
 let refs = [];           // { blob, mime, url, thumb }
 let running = null;      // { ctrl, t0, timer, card }
@@ -559,15 +601,40 @@ const urlCache = new Map(); // id -> [objectURLs]
    ===================================================================== */
 
 /* API key */
+/* Each provider has its own key, stored under its own localStorage entry. */
 const keyEl = $('apiKey');
-keyEl.value = store.get('nbs.apiKey', '') || '';
+const prov = () => PROVIDERS[S.provider];
 const setKeyEye = () => { $('toggleKey').innerHTML = keyEl.type === 'password' ? ICON.eye : ICON.eyeOff; };
 setKeyEye();
 $('toggleKey').onclick = () => { keyEl.type = keyEl.type === 'password' ? 'text' : 'password'; setKeyEye(); };
-const updKeyStatus = () => { $('keyStatus').textContent = keyEl.value.trim() ? 'Saved in this browser only' : 'No key saved'; };
-keyEl.addEventListener('input', () => { const v = keyEl.value.trim(); v ? store.set('nbs.apiKey', v) : store.del('nbs.apiKey'); updKeyStatus(); });
-$('forgetKey').onclick = () => { store.del('nbs.apiKey'); keyEl.value = ''; updKeyStatus(); toast('API key removed from this browser'); };
-updKeyStatus();
+const updKeyStatus = () => { $('keyStatus').textContent = keyEl.value.trim() ? 'Saved in this browser only' : 'Not saved'; };
+keyEl.addEventListener('input', () => { const v = keyEl.value.trim(); v ? store.set(prov().storeKey, v) : store.del(prov().storeKey); updKeyStatus(); });
+$('forgetKey').onclick = () => { store.del(prov().storeKey); keyEl.value = ''; updKeyStatus(); toast(`${prov().keyLabel} removed from this browser`); };
+function renderKey() {
+  const p = prov();
+  $('keyLabel').textContent = p.keyLabel;
+  $('keyLink').href = p.link; $('keyLink').textContent = p.linkText;
+  keyEl.placeholder = p.placeholder;
+  keyEl.value = store.get(p.storeKey, '') || '';
+  keyEl.type = 'password'; setKeyEye();
+  updKeyStatus();
+}
+
+/* provider */
+function renderProvider() {
+  $('providerSeg').replaceChildren(...Object.entries(PROVIDERS).map(([id, p]) => h('button', {
+    type: 'button', class: id === S.provider ? 'sel' : '',
+    onclick: () => { if (id === S.provider) return; S.provider = id; saveSettings(); renderKey(); renderAll(); },
+  }, p.label)));
+  const note = $('providerNote');
+  note.hidden = S.provider !== 'replicate';
+  if (S.provider === 'replicate') {
+    note.classList.toggle('warn', !ON_LOCALHOST);
+    note.innerHTML = ON_LOCALHOST
+      ? 'Requests go through the local proxy (server.py).'
+      : 'Replicate blocks direct browser requests. Run <code>python3 server.py</code> and open <code>http://localhost:8787</code>.';
+  }
+}
 
 /* popovers */
 const POPS = [['modelTrigger', 'modelPop'], ['ratioTrigger', 'ratioPop'], ['qualityTrigger', 'qualityPop'], ['formatTrigger', 'formatPop']];
@@ -589,8 +656,8 @@ document.querySelectorAll('.gicon').forEach(c => c.innerHTML = ICON.google);
 function renderModel() {
   const m = modelById(S.model);
   $('modelName').textContent = m.label;
-  $('crumbModel').textContent = m.label;
-  $('modelPop').replaceChildren(...MODELS.map(mm => h('button', {
+  $('crumbModel').textContent = m.label + (m.provider === 'replicate' ? ' · Replicate' : '');
+  $('modelPop').replaceChildren(...MODELS.filter(mm => mm.provider === S.provider).map(mm => h('button', {
     class: 'dd-item' + (mm.id === S.model ? ' sel' : ''), type: 'button',
     onclick: () => { S.model = mm.id; saveSettings(); closePops(); renderAll(); },
   }, h('span', { html: ICON.google }), h('span', { class: 'grow' }, mm.label, h('br'), h('small', {}, mm.id)), h('span', { class: 'check', html: ICON.check }))));
@@ -799,6 +866,7 @@ async function writeFile(name, blob) {
 function recordText(rec) {
   const lines = [
     `Prompt:\n${rec.prompt || '(none)'}`, '',
+    `Provider: ${rec.provider === 'replicate' ? 'Replicate' : 'Google (Gemini API)'}`,
     `Model: ${rec.modelLabel} (${rec.model})`,
     `Quality: ${rec.imageSize}`,
     `Aspect ratio: ${rec.aspectRatio === 'auto' ? 'Auto (not sent)' : rec.aspectRatio}`,
@@ -808,6 +876,7 @@ function recordText(rec) {
     `Duration: ${(rec.durationMs / 1000).toFixed(1)}s`,
     `Estimated cost: ${money(rec.cost || 0)}`,
   ];
+  if (rec.predictionId) lines.push(`Replicate prediction: ${rec.predictionId}`);
   if (rec.texts?.length) lines.push('', 'Model text:', rec.texts.join('\n\n'));
   return lines.join('\n') + '\n';
 }
@@ -864,7 +933,7 @@ const FINISH_REASONS = {
   MALFORMED_FUNCTION_CALL: 'The model produced a malformed response.',
   OTHER: 'Generation stopped for an unspecified reason.',
 };
-class GenError extends Error {}
+class GenError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
 
 function describeHttp(status, data, raw) {
   const m = (data?.error?.message || (raw || '').slice(0, 400) || '').trim();
@@ -906,22 +975,25 @@ function parseResponse(d) {
 
 async function start() {
   if (running) return;
-  const key = keyEl.value.trim();
-  if (!key) { toast('Paste your Gemini API key first', true); keyEl.focus(); return; }
-  const prompt = promptEl.value.trim();
-  if (!prompt && !refs.length) { toast('Write a prompt first', true); promptEl.focus(); return; }
   const model = modelById(S.model);
+  const isRep = model.provider === 'replicate';
+  const key = keyEl.value.trim();
+  if (!key) { toast(`Paste your ${prov().keyLabel} first`, true); keyEl.focus(); return; }
+  const prompt = promptEl.value.trim();
+  if (!prompt && (isRep || !refs.length)) { toast(isRep ? 'Replicate requires a prompt' : 'Write a prompt first', true); promptEl.focus(); return; }
   if (refs.length > model.maxRefs) { toast(`${model.label} accepts up to ${model.maxRefs} reference images`, true); return; }
 
   // permission prompts need a user gesture — do it now, before the long request
   if (S.saveToFolder && dirHandle && dirPerm !== 'granted') await requestDirPerm();
 
+  const refSnap = refs.slice();
   const rec = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     createdAt: Date.now(),
+    provider: model.provider,
     model: model.id, modelLabel: model.label,
     prompt, aspectRatio: S.ratio, imageSize: S.size,
-    refThumbs: refs.map(r => r.thumb),
+    refThumbs: refSnap.map(r => r.thumb),
   };
   const ctrl = new AbortController();
   const card = renderPendingCard(rec, () => ctrl.abort());
@@ -934,56 +1006,30 @@ async function start() {
   renderStart();
 
   try {
-    const parts = [];
-    if (prompt) parts.push({ text: prompt });
-    for (const r of refs) parts.push({ inlineData: { mimeType: r.mime, data: await blobToB64(r.blob) } });
-    const imageConfig = { imageSize: S.size };
-    if (S.ratio !== 'auto') imageConfig.aspectRatio = S.ratio;
-    const body = {
-      contents: [{ role: 'user', parts }],
-      generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig },
-      safetySettings: SAFETY_SETTINGS,
-    };
-
-    let res;
-    try {
-      res = await fetch(API_BASE + encodeURIComponent(model.id) + ':generateContent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify(body),
-        signal: ctrl.signal,
-      });
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-      throw new GenError('Could not reach the Gemini API (network error). Check your connection.\nIf you opened this file via file:// and requests are being blocked, serve it locally instead:\n  python3 -m http.server   →   http://localhost:8000');
-    }
-    const raw = await res.text();
-    let data = null; try { data = JSON.parse(raw); } catch {}
-    if (!res.ok) throw new GenError(describeHttp(res.status, data, raw));
-
-    const out = parseResponse(data);
+    // Runners fill rec.blob / rec.texts / rec.error and set rec.cost once the provider bills the run.
+    if (isRep) await runReplicate(rec, model, key, prompt, refSnap, ctrl.signal);
+    else await runGoogle(rec, model, key, prompt, refSnap, ctrl.signal);
     rec.durationMs = performance.now() - running.t0;
-    rec.texts = out.texts;
-    rec.finishReason = out.finishReason;
-    if (out.img) {
+    if (rec.blob) {
       rec.status = 'ok';
-      rec.blob = b64ToBlob(out.img.b64, out.img.mime);
       const th = await makeThumb(rec.blob, PREVIEW_MAX);
       rec.preview = th.blob; rec.width = th.w; rec.height = th.h;
-      rec.cost = priceOf(model.id, S.size);
-      addCost(rec.cost);
-    } else if (out.error) {
-      rec.status = 'error'; rec.error = out.error; rec.cost = 0;
+    } else if (rec.error) {
+      rec.status = 'error';
     } else {
-      rec.status = 'text'; rec.cost = 0; // model replied with text only
+      rec.status = 'text'; // model replied with text only
     }
+    rec.cost = rec.cost || 0;
+    if (rec.cost) addCost(rec.cost);
     await persistAndShow(rec, card);
     if (rec.status === 'ok' && S.saveToFolder && dirHandle) {
       saveRecordToFolder(rec).then(n => toast('Saved to folder: ' + n)).catch(e => toast('Folder save failed: ' + e.message, true, 5000));
     }
   } catch (e) {
-    if (e.name === 'AbortError') { card.remove(); toast('Generation cancelled'); updateHistCount(); }
-    else {
+    if (e.name === 'AbortError') {
+      if (rec.predictionId) repFetch(`predictions/${rec.predictionId}/cancel`, key, { method: 'POST' }).catch(() => {});
+      card.remove(); toast('Generation cancelled'); updateHistCount();
+    } else {
       rec.status = 'error'; rec.cost = 0;
       rec.durationMs = performance.now() - running.t0;
       rec.error = e instanceof GenError ? e.message : 'Unexpected error: ' + (e.message || e);
@@ -993,6 +1039,143 @@ async function start() {
     clearInterval(running.timer);
     running = null;
     renderStart();
+  }
+}
+
+/* ---------- Google (Gemini API, direct) ---------- */
+async function runGoogle(rec, model, key, prompt, refList, signal) {
+  const parts = [];
+  if (prompt) parts.push({ text: prompt });
+  for (const r of refList) parts.push({ inlineData: { mimeType: r.mime, data: await blobToB64(r.blob) } });
+  const imageConfig = { imageSize: rec.imageSize };
+  if (rec.aspectRatio !== 'auto') imageConfig.aspectRatio = rec.aspectRatio;
+  const body = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig },
+    safetySettings: SAFETY_SETTINGS,
+  };
+
+  let res;
+  try {
+    res = await fetch(API_BASE + encodeURIComponent(model.id) + ':generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    throw new GenError('Could not reach the Gemini API (network error). Check your connection.\nIf you opened this file via file:// and requests are being blocked, serve it locally instead:\n  python3 server.py   →   http://localhost:8787');
+  }
+  const raw = await res.text();
+  let data = null; try { data = JSON.parse(raw); } catch {}
+  if (!res.ok) throw new GenError(describeHttp(res.status, data, raw));
+
+  const out = parseResponse(data);
+  rec.texts = out.texts;
+  rec.finishReason = out.finishReason;
+  if (out.img) {
+    rec.blob = b64ToBlob(out.img.b64, out.img.mime);
+    rec.cost = priceOf(model.id, rec.imageSize);
+  } else if (out.error) {
+    rec.error = out.error;
+  }
+}
+
+/* ---------- Replicate (via server.py proxy on localhost) ---------- */
+function describeReplicateHttp(status, data, raw, retryAfter) {
+  let m = '';
+  if (data) {
+    if (typeof data.detail === 'string') m = data.detail;
+    else if (Array.isArray(data.detail)) m = data.detail.map(d => `${(d.loc || []).join('.')}: ${d.msg}`).join('\n');
+    if (Array.isArray(data.invalid_fields)) m += (m ? '\n' : '') + data.invalid_fields.map(f => `${f.field}: ${f.description}`).join('\n');
+    if (!m && data.title) m = data.title;
+  }
+  if (!m) m = (raw || '').slice(0, 400).trim();
+  if (status === 401) return `Invalid or missing Replicate API token (401). Check the token in the left panel.\n${m}`;
+  if (status === 402) return `Payment required (402): your Replicate account has no credit or billing isn't set up. Add a payment method at replicate.com/account/billing.\n${m}`;
+  if (status === 422) return `Replicate rejected the input (422).\n${m}`;
+  if (status === 429) return `Replicate rate limit reached (429).${retryAfter ? ` Retry after ${retryAfter}s.` : ' Wait a moment and retry.'}\n${m}`;
+  if (status === 403) return `Access denied by Replicate (403).\n${m}`;
+  if (status === 404) return `Not found on Replicate (404) — the model may have been renamed or removed. Update MODELS at the top of this file.\n${m}`;
+  if (status === 413) return `Upload too large for Replicate (413).\n${m}`;
+  if (status === 502 && ON_LOCALHOST) return `The local proxy couldn't reach Replicate (502).\n${m}`;
+  if (status >= 500) return `Replicate server error (${status}). Try again shortly.\n${m}`;
+  return `Replicate request failed (${status}).\n${m}`;
+}
+async function repFetch(path, token, opts = {}) {
+  let res;
+  try {
+    res = await fetch(REPLICATE_API + path, { ...opts, headers: { Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    throw new GenError(ON_LOCALHOST
+      ? 'Could not reach Replicate through the local proxy. Is server.py still running?'
+      : 'Could not reach the Replicate API. Replicate blocks direct browser requests (CORS), so use the local proxy:\n  python3 server.py   →   http://localhost:8787');
+  }
+  const raw = await res.text();
+  let data = null; try { data = raw ? JSON.parse(raw) : {}; } catch {}
+  if (!res.ok) throw new GenError(describeReplicateHttp(res.status, data, raw, res.headers.get('retry-after')), res.status);
+  return data;
+}
+function sleep(ms, signal) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(res, ms);
+    signal?.addEventListener('abort', () => { clearTimeout(t); rej(new DOMException('Aborted', 'AbortError')); }, { once: true });
+  });
+}
+async function runReplicate(rec, model, token, prompt, refList, signal) {
+  // 1. upload reference images via the Files API; pass their URLs in image_input
+  const files = await Promise.all(refList.map((r, i) => {
+    const name = `reference-${i + 1}.${r.mime.split('/')[1].replace('jpeg', 'jpg')}`;
+    const fd = new FormData();
+    fd.append('content', r.blob, name);
+    fd.append('filename', name);
+    fd.append('type', r.mime);
+    return repFetch('files', token, { method: 'POST', body: fd, signal });
+  }));
+  try {
+    // 2. create the prediction (input schema: replicate.com/<model>/api/schema)
+    const input = { prompt, resolution: rec.imageSize, output_format: S.format };
+    if (rec.aspectRatio !== 'auto') input.aspect_ratio = rec.aspectRatio; // omitted → model default "match_input_image"
+    if (files.length) input.image_input = files.map(f => f.urls.get);
+    if (model.hasFallbackParam) input.allow_fallback_model = false;     // never silently swap models
+    let pred = await repFetch(`models/${model.id}/predictions`, token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'wait=60' },
+      body: JSON.stringify({ input }), signal,
+    });
+    rec.predictionId = pred.id;
+
+    // 3. poll until it reaches a terminal state
+    while (!['succeeded', 'failed', 'canceled'].includes(pred.status)) {
+      await sleep(REPLICATE_POLL_MS, signal);
+      try { pred = await repFetch(`predictions/${pred.id}`, token, { signal }); }
+      catch (e) { if (e.status === 429) { await sleep(3000, signal); continue; } throw e; }
+    }
+    if (pred.status === 'canceled') { rec.error = 'The prediction was canceled on Replicate.'; return; }
+    if (pred.status === 'failed') {
+      const logTail = (pred.logs || '').trim().split('\n').slice(-5).join('\n');
+      rec.error = `Replicate prediction failed.\n${pred.error || logTail || 'No error message was returned.'}`;
+      return;
+    }
+
+    // 4. succeeded → billed; download the image
+    rec.cost = priceOf(model.id, rec.imageSize);
+    const outUrl = Array.isArray(pred.output) ? pred.output[0] : pred.output;
+    if (!outUrl) { rec.error = 'Replicate reported success but returned no output image.'; return; }
+    let res;
+    try { res = await fetch(ON_LOCALHOST ? '/fetch?url=' + encodeURIComponent(outUrl) : outUrl, { signal }); }
+    catch (e) { if (e.name === 'AbortError') throw e; res = null; }
+    if (!res || !res.ok) {
+      rec.error = `The image was generated (and billed) but downloading it failed${res ? ` (${res.status})` : ''}.\nIt stays available for about an hour at:\n${outUrl}`;
+      return;
+    }
+    let blob = await res.blob();
+    if (!blob.type.startsWith('image/')) blob = new Blob([blob], { type: S.format === 'jpg' ? 'image/jpeg' : 'image/png' });
+    rec.blob = blob;
+  } finally {
+    // uploaded references expire on their own; remove them early, best effort
+    for (const f of files) repFetch(`files/${f.id}`, token, { method: 'DELETE' }).catch(() => {});
   }
 }
 async function persistAndShow(rec, card) {
@@ -1017,6 +1200,7 @@ function freeUrls(id) { (urlCache.get(id) || []).forEach(u => URL.revokeObjectUR
 
 function chipsFor(rec) {
   const chips = [
+    rec.provider === 'replicate' ? h('span', { class: 'chip rep' }, 'Replicate') : null,
     h('span', { class: 'chip' }, rec.modelLabel),
     h('span', { class: 'chip' }, rec.imageSize + ' · ' + (QUALITIES.find(q => q.size === rec.imageSize)?.name || '')),
     h('span', { class: 'chip' }, rec.aspectRatio === 'auto' ? 'Auto ratio' : rec.aspectRatio),
@@ -1131,8 +1315,8 @@ $('lbDownload').onclick = () => lbRec && downloadRecord(lbRec);
 /* =====================================================================
    INIT
    ===================================================================== */
-function renderAll() { renderModel(); renderRatio(); renderQuality(); renderFormat(); renderRefs(); renderCost(); }
-renderAll(); renderCount(); renderStart(); renderFolder();
+function renderAll() { renderProvider(); renderModel(); renderRatio(); renderQuality(); renderFormat(); renderRefs(); renderCost(); }
+renderKey(); renderAll(); renderCount(); renderStart(); renderFolder();
 loadHistory();
 (async () => {
   if (!fsSupported) return;
