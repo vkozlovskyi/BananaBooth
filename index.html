@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nano Banana Studio</title>
+<style>
+:root {
+  --bg: #0d0e10;
+  --panel: #15171a;
+  --panel-2: #1c1f23;
+  --panel-3: #23272c;
+  --line: #2a2e34;
+  --line-2: #363b42;
+  --text: #e9eaec;
+  --muted: #8d939b;
+  --faint: #60666e;
+  --accent: #8fc23a;
+  --accent-hi: #a3d651;
+  --accent-ink: #11160a;
+  --accent-soft: rgba(143, 194, 58, .13);
+  --danger: #ff7a70;
+  --danger-soft: rgba(255, 122, 112, .1);
+  --warn: #e8b84a;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 12px 40px rgba(0, 0, 0, .55);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+svg { display: block; }
+[hidden] { display: none !important; }
+
+/* ---------- shell ---------- */
+.app { height: 100vh; display: flex; flex-direction: column; padding: 18px 24px 24px; gap: 14px; }
+.crumbs { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; padding-left: 4px; }
+.crumbs b { color: var(--text); font-weight: 600; }
+.main { flex: 1; min-height: 0; display: grid; grid-template-columns: 410px 1fr; gap: 16px; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+  min-height: 0; display: flex; flex-direction: column;
+}
+.left-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 8px; }
+.left-foot { padding: 12px 20px 16px; border-top: 1px solid var(--line); }
+
+.label { font-size: 13px; color: var(--muted); margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; }
+.label strong { color: var(--text); font-weight: 600; font-size: 14px; }
+.section { margin-bottom: 20px; }
+.hint { font-size: 12px; color: var(--faint); }
+.hint a { color: var(--muted); }
+
+/* ---------- inputs ---------- */
+.field {
+  display: flex; align-items: center; gap: 6px; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 6px 0 12px; height: 42px;
+}
+.field:focus-within { border-color: var(--line-2); }
+.field input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; height: 100%; }
+.icon-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent; background: none;
+  display: inline-grid; place-items: center; color: var(--muted); flex: none;
+}
+.icon-btn:hover { background: var(--panel-3); color: var(--text); }
+.icon-btn.bordered { border-color: var(--line); }
+.icon-btn.danger:hover { color: var(--danger); background: var(--danger-soft); }
+.text-btn { background: none; border: 0; padding: 0; color: var(--muted); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.text-btn:hover { color: var(--text); }
+.key-row { display: flex; justify-content: space-between; margin-top: 6px; }
+
+/* ---------- model dropdown ---------- */
+.dd { position: relative; }
+.dd-trigger {
+  width: 100%; height: 50px; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); text-align: left;
+}
+.dd-trigger:hover { border-color: var(--line-2); }
+.dd-trigger .grow { flex: 1; }
+.chev { color: var(--muted); transition: transform .15s; }
+.open > .chev, .open .chev { transform: rotate(180deg); color: var(--accent); }
+.pop {
+  position: absolute; z-index: 30; top: calc(100% + 6px); background: var(--panel-2);
+  border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px;
+}
+.dd .pop { left: 0; right: 0; }
+.dd-item {
+  width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 10px; border: 0; background: none;
+  border-radius: 8px; text-align: left;
+}
+.dd-item:hover { background: var(--panel-3); }
+.dd-item .grow { flex: 1; }
+.dd-item small { color: var(--faint); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dd-item .check { color: var(--accent); visibility: hidden; }
+.dd-item.sel .check { visibility: visible; }
+
+/* ---------- prompt ---------- */
+.prompt-box {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 12px 10px;
+  transition: border-color .15s, background .15s;
+}
+.prompt-box:focus-within { border-color: var(--line-2); }
+.prompt-box.drag { border-color: var(--accent); background: var(--accent-soft); }
+.prompt-box textarea {
+  width: 100%; min-height: 128px; resize: vertical; background: none; border: 0; outline: 0; padding: 2px;
+  line-height: 1.5;
+}
+.prompt-box textarea::placeholder { color: var(--faint); }
+.refs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ref-add {
+  width: 46px; height: 46px; border-radius: 10px; border: 1.5px dashed var(--line-2); background: none;
+  display: grid; place-items: center; color: var(--muted);
+}
+.ref-add:hover { color: var(--accent); border-color: var(--accent); }
+.ref-add:disabled { opacity: .35; cursor: not-allowed; }
+.ref { position: relative; width: 46px; height: 46px; }
+.ref img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 1px solid var(--line-2); }
+.ref .x {
+  position: absolute; top: -6px; right: -6px; width: 19px; height: 19px; border-radius: 50%;
+  background: #f1f1f1; color: #111; border: 2px solid var(--panel-2); display: grid; place-items: center; padding: 0;
+}
+.ref .x:hover { background: var(--danger); }
+.refs-count { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.refs-count.over { color: var(--danger); }
+.char-count.over { color: var(--danger); }
+
+/* ---------- setting rows ---------- */
+.row { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
+.row-label { font-weight: 600; }
+.row-trigger {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; border-radius: 10px;
+  border: 0; background: none; color: var(--text);
+}
+.row-trigger:hover, .row-trigger.open { background: var(--panel-2); }
+.row-trigger .val { display: flex; align-items: center; gap: 8px; }
+.row-trigger .sub { color: var(--muted); }
+.row .pop { right: 0; }
+
+.tiles { display: grid; gap: 8px; }
+.tiles.ratio { grid-template-columns: repeat(4, 78px); }
+.tiles.quality { grid-template-columns: repeat(3, 104px); }
+.tile {
+  border: 1.5px solid transparent; background: var(--panel-3); border-radius: 10px; padding: 10px 6px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-height: 64px;
+  color: var(--text); font-size: 13px;
+}
+.tile:hover { border-color: var(--line-2); }
+.tile.sel { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-hi); }
+.tile .sub { color: var(--muted); font-size: 12px; }
+.tile.sel .sub { color: var(--accent); }
+.tile .price { color: var(--faint); font-size: 11px; }
+.shape { border: 1.6px solid currentColor; border-radius: 3px; }
+.shape.dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; border: 0; margin-bottom: 6px; }
+.fmt-list { min-width: 170px; }
+
+.toggle-row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.toggle-row label { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
+.toggle-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.folder-info { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin: -4px 0 0 26px; flex-wrap: wrap; }
+.folder-info .name { font-family: ui-monospace, Menlo, monospace; color: var(--text); }
+.folder-info .warn { color: var(--warn); }
+
+/* ---------- start ---------- */
+.start {
+  width: 100%; height: 52px; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink);
+  font-weight: 650; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background .15s, transform .05s;
+}
+.start:hover { background: var(--accent-hi); }
+.start:active { transform: translateY(1px); }
+.start:disabled { background: var(--panel-3); color: var(--muted); cursor: progress; }
+.start kbd { font: 11px ui-monospace, Menlo, monospace; opacity: .6; border: 1px solid currentColor; border-radius: 5px; padding: 1px 5px; }
+.spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.cost { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; font-size: 12px; color: var(--muted); gap: 8px; flex-wrap: wrap; }
+.cost b { color: var(--text); font-weight: 600; }
+.cost .totals { display: flex; gap: 10px; align-items: baseline; }
+.foot-note { margin-top: 10px; font-size: 11px; color: var(--faint); line-height: 1.4; }
+
+/* ---------- feed ---------- */
+.right { overflow: hidden; }
+.feed-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.tab { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 10px; background: var(--panel-2); font-weight: 600; }
+.feed-head .count { color: var(--muted); font-size: 13px; }
+.feed { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 14px; }
+.empty { margin: auto; text-align: center; color: var(--muted); max-width: 340px; }
+.empty .big { font-size: 40px; margin-bottom: 8px; }
+
+.card { background: #121417; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+.card-head { display: flex; align-items: flex-start; gap: 14px; }
+.card-prompt {
+  flex: 1; margin: 0; white-space: pre-wrap; word-break: break-word; cursor: pointer;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-prompt.expanded { -webkit-line-clamp: unset; display: block; }
+.card-prompt.none { color: var(--faint); font-style: italic; cursor: default; }
+.card-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.card-actions .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.time { font-size: 12px; color: var(--muted); min-width: 52px; text-align: right; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+.chip { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+.chip.ok { color: var(--accent); border-color: rgba(143,194,58,.3); }
+.chip.bad { color: var(--danger); border-color: rgba(255,122,112,.3); }
+.result-img {
+  display: block; max-width: 100%; max-height: 560px; width: auto; height: auto; border-radius: 12px; cursor: zoom-in;
+  background: var(--panel-2);
+}
+.err {
+  background: var(--danger-soft); border: 1px solid rgba(255,122,112,.25); color: #ffc9c4; border-radius: 12px;
+  padding: 12px 14px; white-space: pre-wrap; word-break: break-word;
+}
+.err b { color: var(--danger); display: block; margin-bottom: 4px; }
+.model-text {
+  margin-top: 10px; padding: 10px 12px; border-left: 2px solid var(--line-2); color: #c6c9ce;
+  white-space: pre-wrap; word-break: break-word; font-size: 13px;
+}
+.model-text .who { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 2px; }
+.card-refs { display: flex; gap: 6px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+.card-refs span { font-size: 11.5px; color: var(--faint); margin-right: 4px; }
+.card-refs img { width: 36px; height: 36px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line-2); cursor: zoom-in; }
+
+.pending-box {
+  position: relative; max-width: 420px; border-radius: 12px; overflow: hidden; background: var(--panel-2);
+  display: grid; place-items: center;
+}
+.pending-box::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.05) 50%, transparent 80%);
+  background-size: 200% 100%; animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+.pending-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); }
+.pending-inner .elapsed { font: 600 22px ui-monospace, Menlo, monospace; color: var(--text); }
+
+/* ---------- lightbox / toast ---------- */
+.lightbox {
+  position: fixed; inset: 0; z-index: 100; background: rgba(5,6,8,.92); display: flex; align-items: center; justify-content: center;
+  padding: 56px 24px 24px; cursor: zoom-out;
+}
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; cursor: default; }
+.lb-bar { position: fixed; top: 12px; right: 16px; display: flex; gap: 8px; align-items: center; }
+.lb-bar .meta { color: var(--muted); font-size: 12px; margin-right: 8px; }
+.lb-bar .icon-btn { background: rgba(255,255,255,.08); color: var(--text); }
+.toast-wrap { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.toast { background: var(--panel-3); border: 1px solid var(--line-2); padding: 9px 14px; border-radius: 10px; box-shadow: var(--shadow); font-size: 13px; animation: tin .15s ease-out; }
+.toast.bad { border-color: rgba(255,122,112,.4); color: #ffc9c4; }
+@keyframes tin { from { opacity: 0; transform: translateY(6px); } }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #2c3036; border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 900px) {
+  .app { height: auto; min-height: 100vh; padding: 12px 16px; }
+  .main { grid-template-columns: 1fr; }
+  .feed { overflow: visible; }
+  .tiles.ratio { grid-template-columns: repeat(4, 64px); }
+  .tiles.quality { grid-template-columns: repeat(3, 88px); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="crumbs">Models <span>/</span> <b id="crumbModel">Nano Banana Pro</b></div>
+
+  <div class="main">
+    <!-- ================= LEFT: controls ================= -->
+    <aside class="panel">
+      <div class="left-scroll">
+
+        <div class="section">
+          <div class="label"><strong>API key</strong><a class="hint" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a key ↗</a></div>
+          <div class="field">
+            <input id="apiKey" type="password" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false">
+            <button class="icon-btn" id="toggleKey" title="Show / hide key" type="button"></button>
+          </div>
+          <div class="key-row">
+            <span class="hint" id="keyStatus">Saved in this browser only</span>
+            <button class="text-btn" id="forgetKey" type="button">Forget key</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label"><strong>Model</strong></div>
+          <div class="dd" id="modelDd">
+            <button class="dd-trigger" id="modelTrigger" type="button">
+              <span class="gicon"></span><span class="grow" id="modelName"></span><span class="chev"></span>
+            </button>
+            <div class="pop" id="modelPop" hidden></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label"><strong>Prompt</strong><span class="char-count" id="charCount">0 / 10,000</span></div>
+          <div class="prompt-box" id="promptBox">
+            <textarea id="prompt" placeholder="Describe the image you want… Drop, paste or add reference images below."></textarea>
+            <div class="refs" id="refs">
+              <button class="ref-add" id="addRef" type="button" title="Add reference images (or drag & drop / paste)"></button>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden>
+          </div>
+          <div class="refs-count" id="refsCount">Reference images: 0 / 14</div>
+        </div>
+
+        <div class="section">
+          <div class="row">
+            <span class="row-label">Aspect ratio</span>
+            <button class="row-trigger" id="ratioTrigger" type="button"><span class="val" id="ratioVal"></span><span class="chev"></span></button>
+            <div class="pop" id="ratioPop" hidden><div class="tiles ratio" id="ratioTiles"></div></div>
+          </div>
+          <div class="row">
+            <span class="row-label">Generation quality</span>
+            <button class="row-trigger" id="qualityTrigger" type="button"><span class="val" id="qualityVal"></span><span class="chev"></span></button>
+            <div class="pop" id="qualityPop" hidden><div class="tiles quality" id="qualityTiles"></div></div>
+          </div>
+          <div class="row">
+            <span class="row-label">Output format</span>
+            <button class="row-trigger" id="formatTrigger" type="button"><span class="val" id="formatVal"></span><span class="chev"></span></button>
+            <div class="pop fmt-list" id="formatPop" hidden></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="toggle-row">
+            <label><input type="checkbox" id="saveFolder"> <span class="row-label">Save to folder</span></label>
+          </div>
+          <div class="folder-info" id="folderInfo"></div>
+        </div>
+      </div>
+
+      <div class="left-foot">
+        <button class="start" id="startBtn" type="button"></button>
+        <div class="cost">
+          <span>This run ≈ <b id="runCost">$0.000</b></span>
+          <span class="totals">
+            <span>Session <b id="sessionCost">$0.000</b></span>
+            <span>All-time <b id="totalCost">$0.000</b></span>
+            <button class="text-btn" id="resetCost" type="button" title="Reset all-time total">reset</button>
+          </span>
+        </div>
+        <div class="foot-note">Your API key stays in this browser (localStorage) and is sent only to generativelanguage.googleapis.com. Don't host this file publicly. Prices are estimates.</div>
+      </div>
+    </aside>
+
+    <!-- ================= RIGHT: history ================= -->
+    <section class="panel right">
+      <div class="feed-head">
+        <span class="tab"><span id="histIcon"></span>History</span>
+        <span class="count" id="histCount"></span>
+      </div>
+      <div class="feed" id="feed"></div>
+    </section>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" hidden>
+  <div class="lb-bar">
+    <span class="meta" id="lbMeta"></span>
+    <button class="icon-btn" id="lbDownload" title="Download full resolution" type="button"></button>
+    <button class="icon-btn" id="lbClose" title="Close (Esc)" type="button"></button>
+  </div>
+  <img id="lbImg" alt="">
+</div>
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   CONFIG — verify against ai.google.dev/gemini-api/docs (checked 2026-10-08)
+   - The "-preview" IDs (gemini-3.1-flash-image-preview, gemini-3-pro-image-preview)
+     were shut down 2026-06-25; these are the GA IDs.
+   - Prices: ai.google.dev/gemini-api/docs/pricing, USD per output image.
+   ===================================================================== */
+const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const MODELS = [
+  { id: 'gemini-3.1-flash-image', label: 'Nano Banana 2',   short: 'nb2',   maxRefs: 14,
+    price: { '1K': 0.067, '2K': 0.101, '4K': 0.151 } },
+  { id: 'gemini-3-pro-image',     label: 'Nano Banana Pro', short: 'nbpro', maxRefs: 14,
+    price: { '1K': 0.134, '2K': 0.134, '4K': 0.24 } },
+];
+const RATIOS = ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '16:9', '9:16', '21:9'];
+const QUALITIES = [
+  { size: '1K', name: 'Standard' },
+  { size: '2K', name: 'High' },
+  { size: '4K', name: 'Ultra' },
+];
+const FORMATS = [{ id: 'png', label: 'PNG' }, { id: 'jpg', label: 'JPG' }];
+const PROMPT_SOFT_LIMIT = 10000;
+const PREVIEW_MAX = 900;      // px, feed preview (webp)
+const REF_THUMB_MAX = 160;    // px, reference thumbnails stored with history
+const JPG_QUALITY = 0.95;
+
+/* ---------- icons ---------- */
+const I = (d, s = 18, extra = '') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
+const ICON = {
+  eye: I('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+  eyeOff: I('<path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="m2 2 20 20"/>'),
+  chev: I('<path d="m6 9 6 6 6-6"/>', 16),
+  check: I('<path d="M20 6 9 17l-5-5"/>', 16, 'stroke-width="2.2"'),
+  imgPlus: I('<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><path d="M16 5h6M19 2v6"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>', 20),
+  x: I('<path d="M18 6 6 18M6 6l12 12"/>', 11, 'stroke-width="3"'),
+  xl: I('<path d="M18 6 6 18M6 6l12 12"/>', 18),
+  download: I('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>', 17),
+  copy: I('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16),
+  trash: I('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', 16),
+  history: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', 16),
+  spark: I('<path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/>', 18),
+  google: `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>`,
+};
+
+/* ---------- small helpers ---------- */
+const $ = id => document.getElementById(id);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+  return el;
+}
+const store = {
+  get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const sstore = {
+  get(k, d = 0) { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const money = n => '$' + (Math.round(n * 1000) / 1000).toFixed(3);
+function toast(msg, bad = false, ms = 2600) {
+  const t = h('div', { class: 'toast' + (bad ? ' bad' : '') }, msg);
+  $('toasts').append(t);
+  setTimeout(() => t.remove(), ms);
+}
+function relTime(ts) {
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 45) return 'just now';
+  const m = Math.round(s / 60); if (m < 60) return m + 'm ago';
+  const hr = Math.round(m / 60); if (hr < 24) return hr + 'h ago';
+  const d = Math.round(hr / 24); if (d < 30) return d + 'd ago';
+  return new Date(ts).toLocaleDateString();
+}
+const pad = n => String(n).padStart(2, '0');
+function stamp(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+const modelById = id => MODELS.find(m => m.id === id) || { id, label: id, short: id.replace(/[^a-z0-9]+/gi, '-'), maxRefs: 14, price: {} };
+const priceOf = (modelId, size) => modelById(modelId).price[size] ?? 0;
+
+function b64ToBlob(b64, mime) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+function blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+const canvasToBlob = (c, type, q) => new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Canvas encode failed')), type, q));
+async function drawScaled(blob, max, opaque = false) {
+  const bmp = await createImageBitmap(blob);
+  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(bmp.width * s));
+  c.height = Math.max(1, Math.round(bmp.height * s));
+  const g = c.getContext('2d');
+  if (opaque) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  const dims = { w: bmp.width, h: bmp.height };
+  bmp.close?.();
+  return { canvas: c, ...dims };
+}
+async function makeThumb(blob, max) {
+  const { canvas, w, h: hh } = await drawScaled(blob, max);
+  return { blob: await canvasToBlob(canvas, 'image/webp', 0.85), w, h: hh };
+}
+
+/* ---------- IndexedDB ---------- */
+const DB_NAME = 'nano-banana-studio';
+const dbp = new Promise((res, rej) => {
+  const r = indexedDB.open(DB_NAME, 1);
+  r.onupgradeneeded = () => {
+    const db = r.result;
+    if (!db.objectStoreNames.contains('gens')) db.createObjectStore('gens', { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+  };
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+});
+function idb(storeName, mode, fn) {
+  return dbp.then(db => new Promise((res, rej) => {
+    const t = db.transaction(storeName, mode);
+    const req = fn(t.objectStore(storeName));
+    let out;
+    if (req) req.onsuccess = () => { out = req.result; };
+    t.oncomplete = () => res(out);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error || new Error('IndexedDB transaction aborted'));
+  }));
+}
+const db = {
+  all: () => idb('gens', 'readonly', s => s.getAll()),
+  put: rec => idb('gens', 'readwrite', s => s.put(rec)),
+  del: id => idb('gens', 'readwrite', s => s.delete(id)),
+  kvGet: k => idb('kv', 'readonly', s => s.get(k)),
+  kvSet: (k, v) => idb('kv', 'readwrite', s => s.put(v, k)),
+  kvDel: k => idb('kv', 'readwrite', s => s.delete(k)),
+};
+navigator.storage?.persist?.().catch(() => {});
+
+/* ---------- state ---------- */
+const saved = store.get('nbs.settings', {});
+const S = {
+  model: MODELS.some(m => m.id === saved.model) ? saved.model : MODELS[1].id,
+  ratio: RATIOS.includes(saved.ratio) ? saved.ratio : 'auto',
+  size: QUALITIES.some(q => q.size === saved.size) ? saved.size : '1K',
+  format: saved.format === 'jpg' ? 'jpg' : 'png',
+  saveToFolder: !!saved.saveToFolder,
+};
+const saveSettings = () => store.set('nbs.settings', S);
+let refs = [];           // { blob, mime, url, thumb }
+let running = null;      // { ctrl, t0, timer, card }
+let dirHandle = null;
+let dirPerm = 'none';    // 'granted' | 'prompt' | 'denied' | 'none'
+const urlCache = new Map(); // id -> [objectURLs]
+
+/* =====================================================================
+   LEFT PANEL
+   ===================================================================== */
+
+/* API key */
+const keyEl = $('apiKey');
+keyEl.value = store.get('nbs.apiKey', '') || '';
+const setKeyEye = () => { $('toggleKey').innerHTML = keyEl.type === 'password' ? ICON.eye : ICON.eyeOff; };
+setKeyEye();
+$('toggleKey').onclick = () => { keyEl.type = keyEl.type === 'password' ? 'text' : 'password'; setKeyEye(); };
+const updKeyStatus = () => { $('keyStatus').textContent = keyEl.value.trim() ? 'Saved in this browser only' : 'No key saved'; };
+keyEl.addEventListener('input', () => { const v = keyEl.value.trim(); v ? store.set('nbs.apiKey', v) : store.del('nbs.apiKey'); updKeyStatus(); });
+$('forgetKey').onclick = () => { store.del('nbs.apiKey'); keyEl.value = ''; updKeyStatus(); toast('API key removed from this browser'); };
+updKeyStatus();
+
+/* popovers */
+const POPS = [['modelTrigger', 'modelPop'], ['ratioTrigger', 'ratioPop'], ['qualityTrigger', 'qualityPop'], ['formatTrigger', 'formatPop']];
+function closePops() { for (const [t, p] of POPS) { $(p).hidden = true; $(t).classList.remove('open'); } }
+for (const [t, p] of POPS) {
+  $(t).addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = !$(p).hidden;
+    closePops();
+    if (!wasOpen) { $(p).hidden = false; $(t).classList.add('open'); }
+  });
+  $(p).addEventListener('click', e => e.stopPropagation());
+}
+document.addEventListener('click', closePops);
+document.querySelectorAll('.chev').forEach(c => c.innerHTML = ICON.chev);
+
+/* model */
+document.querySelectorAll('.gicon').forEach(c => c.innerHTML = ICON.google);
+function renderModel() {
+  const m = modelById(S.model);
+  $('modelName').textContent = m.label;
+  $('crumbModel').textContent = m.label;
+  $('modelPop').replaceChildren(...MODELS.map(mm => h('button', {
+    class: 'dd-item' + (mm.id === S.model ? ' sel' : ''), type: 'button',
+    onclick: () => { S.model = mm.id; saveSettings(); closePops(); renderAll(); },
+  }, h('span', { html: ICON.google }), h('span', { class: 'grow' }, mm.label, h('br'), h('small', {}, mm.id)), h('span', { class: 'check', html: ICON.check }))));
+}
+
+/* aspect ratio */
+function shapeEl(r, max = 22) {
+  if (r === 'auto') return h('span', { class: 'shape dot' });
+  const [w, hh] = r.split(':').map(Number);
+  const s = max / Math.max(w, hh);
+  return h('span', { class: 'shape', style: `width:${Math.round(w * s)}px;height:${Math.round(hh * s)}px` });
+}
+function renderRatio() {
+  $('ratioVal').replaceChildren(shapeEl(S.ratio, 16), S.ratio === 'auto' ? 'Auto' : S.ratio);
+  $('ratioTiles').replaceChildren(...RATIOS.map(r => h('button', {
+    class: 'tile' + (r === S.ratio ? ' sel' : ''), type: 'button', title: r === 'auto' ? 'Let the model decide (matches the reference image if any)' : r,
+    onclick: () => { S.ratio = r; saveSettings(); closePops(); renderAll(); },
+  }, shapeEl(r), r === 'auto' ? 'Auto' : r)));
+}
+
+/* quality */
+function renderQuality() {
+  const q = QUALITIES.find(q => q.size === S.size);
+  $('qualityVal').replaceChildren(q.size, h('span', { class: 'sub' }, '· ' + q.name));
+  $('qualityTiles').replaceChildren(...QUALITIES.map(qq => h('button', {
+    class: 'tile' + (qq.size === S.size ? ' sel' : ''), type: 'button',
+    onclick: () => { S.size = qq.size; saveSettings(); closePops(); renderAll(); },
+  }, h('b', {}, qq.name), h('span', { class: 'sub' }, qq.size), h('span', { class: 'price' }, money(priceOf(S.model, qq.size))))));
+}
+
+/* format */
+function renderFormat() {
+  $('formatVal').textContent = S.format.toUpperCase();
+  $('formatPop').replaceChildren(...FORMATS.map(f => h('button', {
+    class: 'dd-item' + (f.id === S.format ? ' sel' : ''), type: 'button',
+    onclick: () => { S.format = f.id; saveSettings(); closePops(); renderAll(); },
+  }, h('span', { class: 'grow' }, f.label), h('span', { class: 'check', html: ICON.check }))));
+}
+
+/* prompt + refs */
+const promptEl = $('prompt');
+promptEl.value = store.get('nbs.draft', '') || '';
+function renderCount() {
+  const n = promptEl.value.length;
+  $('charCount').textContent = `${n.toLocaleString('en-US')} / ${PROMPT_SOFT_LIMIT.toLocaleString('en-US')}`;
+  $('charCount').classList.toggle('over', n > PROMPT_SOFT_LIMIT);
+}
+promptEl.addEventListener('input', () => { renderCount(); store.set('nbs.draft', promptEl.value); });
+
+$('addRef').innerHTML = ICON.imgPlus;
+$('addRef').onclick = () => $('fileInput').click();
+$('fileInput').onchange = e => { addRefFiles([...e.target.files]); e.target.value = ''; };
+
+const API_OK_MIME = ['image/png', 'image/jpeg', 'image/webp'];
+async function normalizeRef(file) {
+  // Re-encode formats the API doesn't take (gif, bmp, avif…) and very large files to keep requests small.
+  if (API_OK_MIME.includes(file.type) && file.size <= 7 * 1024 * 1024) return { blob: file, mime: file.type };
+  const big = file.size > 7 * 1024 * 1024;
+  const { canvas } = await drawScaled(file, big ? 3072 : 8192, big);
+  if (big) return { blob: await canvasToBlob(canvas, 'image/jpeg', 0.92), mime: 'image/jpeg' };
+  return { blob: await canvasToBlob(canvas, 'image/png'), mime: 'image/png' };
+}
+async function addRefFiles(files) {
+  const imgs = files.filter(f => f && f.type.startsWith('image/'));
+  if (!imgs.length) { if (files.length) toast('Only image files can be used as references', true); return; }
+  const max = modelById(S.model).maxRefs;
+  for (const f of imgs) {
+    if (refs.length >= max) { toast(`Maximum ${max} reference images for this model`, true); break; }
+    try {
+      const { blob, mime } = await normalizeRef(f);
+      const thumb = (await makeThumb(blob, REF_THUMB_MAX)).blob;
+      refs.push({ blob, mime, thumb, url: URL.createObjectURL(thumb) });
+    } catch (err) {
+      toast(`Couldn't read "${f.name || 'image'}" (${f.type || 'unknown type'}). HEIC isn't decodable in Chrome — convert to JPG/PNG.`, true, 4500);
+    }
+  }
+  renderRefs();
+}
+function renderRefs() {
+  const max = modelById(S.model).maxRefs;
+  const thumbs = refs.map((r, i) => h('div', { class: 'ref' },
+    h('img', { src: r.url, alt: 'reference ' + (i + 1) }),
+    h('button', { class: 'x', type: 'button', title: 'Remove', html: ICON.x, onclick: () => { URL.revokeObjectURL(r.url); refs.splice(i, 1); renderRefs(); } })));
+  $('refs').replaceChildren($('addRef'), ...thumbs);
+  $('addRef').disabled = refs.length >= max;
+  $('refsCount').textContent = `Reference images: ${refs.length} / ${max}`;
+  $('refsCount').classList.toggle('over', refs.length > max);
+}
+// drag & drop onto the whole left panel
+const dropZone = document.querySelector('aside.panel');
+let dragDepth = 0;
+dropZone.addEventListener('dragenter', e => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); dragDepth++; $('promptBox').classList.add('drag'); } });
+dropZone.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
+dropZone.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('promptBox').classList.remove('drag'); } });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dragDepth = 0; $('promptBox').classList.remove('drag');
+  addRefFiles([...(e.dataTransfer?.files || [])]);
+});
+// prevent the browser from opening files dropped elsewhere
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+// paste images from clipboard (anywhere on the page)
+document.addEventListener('paste', e => {
+  const files = [...(e.clipboardData?.items || [])].filter(it => it.kind === 'file' && it.type.startsWith('image/')).map(it => it.getAsFile()).filter(Boolean);
+  if (files.length) { e.preventDefault(); addRefFiles(files); }
+});
+
+/* cost */
+function renderCost() {
+  $('runCost').textContent = money(priceOf(S.model, S.size));
+  $('sessionCost').textContent = money(sstore.get('nbs.sessionCost', 0));
+  $('totalCost').textContent = money(store.get('nbs.totalCost', 0));
+}
+function addCost(c) {
+  sstore.set('nbs.sessionCost', sstore.get('nbs.sessionCost', 0) + c);
+  store.set('nbs.totalCost', store.get('nbs.totalCost', 0) + c);
+  renderCost();
+}
+$('resetCost').onclick = () => {
+  if (!confirm('Reset the all-time cost total?')) return;
+  store.set('nbs.totalCost', 0); sstore.set('nbs.sessionCost', 0); renderCost();
+};
+
+/* start button */
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+function renderStart() {
+  const b = $('startBtn');
+  if (running) {
+    b.disabled = true;
+    b.replaceChildren(h('span', { class: 'spinner' }), `Generating… ${((performance.now() - running.t0) / 1000).toFixed(1)}s`);
+  } else {
+    b.disabled = false;
+    b.replaceChildren(h('span', { html: ICON.spark }), 'Start', h('kbd', {}, isMac ? '⌘ ↵' : 'Ctrl ↵'));
+  }
+}
+$('startBtn').onclick = () => start();
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); start(); }
+  if (e.key === 'Escape') { closePops(); closeLightbox(); }
+});
+
+/* =====================================================================
+   SAVE TO FOLDER (File System Access API)
+   ===================================================================== */
+const fsSupported = typeof window.showDirectoryPicker === 'function';
+$('saveFolder').checked = fsSupported && S.saveToFolder;
+$('saveFolder').disabled = !fsSupported;
+
+async function refreshDirPerm() {
+  if (!dirHandle) { dirPerm = 'none'; return; }
+  try { dirPerm = await dirHandle.queryPermission({ mode: 'readwrite' }); } catch { dirPerm = 'denied'; }
+}
+async function requestDirPerm() {
+  if (!dirHandle) return false;
+  try { dirPerm = await dirHandle.requestPermission({ mode: 'readwrite' }); } catch { dirPerm = 'denied'; }
+  renderFolder();
+  return dirPerm === 'granted';
+}
+async function pickDir() {
+  try {
+    dirHandle = await window.showDirectoryPicker({ id: 'nano-banana-studio', mode: 'readwrite' });
+    await db.kvSet('dirHandle', dirHandle);
+    dirPerm = 'granted';
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Could not open folder: ' + e.message, true);
+    return false;
+  } finally { renderFolder(); }
+}
+function renderFolder() {
+  const info = $('folderInfo');
+  if (!fsSupported) {
+    info.replaceChildren(h('span', {}, 'Needs Chrome or Edge (File System Access API). Use the download buttons instead.'));
+    return;
+  }
+  if (!dirHandle) { info.replaceChildren(h('span', {}, 'Auto-saves each image + a .txt with prompt & settings.')); return; }
+  const kids = [h('span', {}, 'Folder:'), h('span', { class: 'name' }, dirHandle.name)];
+  if (dirPerm !== 'granted') {
+    kids.push(h('span', { class: 'warn' }, 'access needs re-granting'),
+      h('button', { class: 'text-btn', type: 'button', onclick: requestDirPerm }, 'Grant access'));
+  }
+  kids.push(h('button', { class: 'text-btn', type: 'button', onclick: pickDir }, 'Change'));
+  info.replaceChildren(...kids);
+}
+$('saveFolder').addEventListener('change', async e => {
+  if (e.target.checked) {
+    if (!dirHandle) { if (!(await pickDir())) { e.target.checked = false; } }
+    else if (dirPerm !== 'granted') { await requestDirPerm(); }
+  }
+  S.saveToFolder = e.target.checked; saveSettings();
+});
+async function saveRecordToFolder(rec) {
+  if (dirPerm !== 'granted') await refreshDirPerm();
+  if (dirPerm !== 'granted') throw new Error('No write permission for the folder — click "Grant access".');
+  const { blob, name } = await exportImage(rec, S.format);
+  await writeFile(name, blob);
+  await writeFile(fileBase(rec) + '.txt', new Blob([recordText(rec)], { type: 'text/plain' }));
+  return name;
+}
+async function writeFile(name, blob) {
+  const fh = await dirHandle.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+}
+function recordText(rec) {
+  const lines = [
+    `Prompt:\n${rec.prompt || '(none)'}`, '',
+    `Model: ${rec.modelLabel} (${rec.model})`,
+    `Quality: ${rec.imageSize}`,
+    `Aspect ratio: ${rec.aspectRatio === 'auto' ? 'Auto (not sent)' : rec.aspectRatio}`,
+    `Output size: ${rec.width}×${rec.height}`,
+    `Reference images: ${rec.refThumbs?.length || 0}`,
+    `Created: ${new Date(rec.createdAt).toString()}`,
+    `Duration: ${(rec.durationMs / 1000).toFixed(1)}s`,
+    `Estimated cost: ${money(rec.cost || 0)}`,
+  ];
+  if (rec.texts?.length) lines.push('', 'Model text:', rec.texts.join('\n\n'));
+  return lines.join('\n') + '\n';
+}
+
+/* =====================================================================
+   EXPORT / DOWNLOAD
+   ===================================================================== */
+function fileBase(rec) {
+  const ratio = rec.aspectRatio === 'auto' ? 'auto' : rec.aspectRatio.replace(':', 'x');
+  return `nanobanana_${stamp(rec.createdAt)}_${modelById(rec.model).short}_${rec.imageSize}_${ratio}`;
+}
+async function exportImage(rec, fmt) {
+  const want = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+  let blob = rec.blob;
+  if (blob.type !== want) {
+    const { canvas } = await drawScaled(blob, Infinity, want === 'image/jpeg');
+    blob = await canvasToBlob(canvas, want, want === 'image/jpeg' ? JPG_QUALITY : undefined);
+  }
+  return { blob, name: `${fileBase(rec)}.${fmt}` };
+}
+async function downloadRecord(rec) {
+  try {
+    const { blob, name } = await exportImage(rec, S.format);
+    const url = URL.createObjectURL(blob);
+    const a = h('a', { href: url, download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (e) { toast('Download failed: ' + e.message, true); }
+}
+
+/* =====================================================================
+   GEMINI API
+   ===================================================================== */
+const BLOCK_REASONS = {
+  SAFETY: 'Your prompt was blocked by safety filters.',
+  BLOCKLIST: 'Your prompt contains blocked terms.',
+  PROHIBITED_CONTENT: 'Your prompt was flagged as prohibited content.',
+  IMAGE_SAFETY: 'A reference image was blocked by safety filters.',
+  OTHER: 'Your prompt was blocked for an unspecified reason.',
+};
+const FINISH_REASONS = {
+  SAFETY: 'Generation was blocked by safety filters.',
+  IMAGE_SAFETY: 'The generated image was blocked by safety filters. Try rephrasing the prompt.',
+  PROHIBITED_CONTENT: 'Generation was stopped: the content was flagged as prohibited.',
+  IMAGE_PROHIBITED_CONTENT: 'The generated image was flagged as prohibited content.',
+  BLOCKLIST: 'Generation was stopped: blocked terms were detected.',
+  SPII: 'Generation was stopped: possible sensitive personal information.',
+  RECITATION: 'Generation was stopped: the output resembled existing copyrighted material.',
+  IMAGE_RECITATION: 'The generated image resembled existing copyrighted material and was withheld.',
+  IMAGE_OTHER: 'The model could not produce an image for this request.',
+  NO_IMAGE: 'The model did not return an image. Try making the prompt more explicitly about an image.',
+  MAX_TOKENS: 'Generation stopped early because the output limit was reached.',
+  LANGUAGE: 'The prompt language is not supported.',
+  MALFORMED_FUNCTION_CALL: 'The model produced a malformed response.',
+  OTHER: 'Generation stopped for an unspecified reason.',
+};
+class GenError extends Error {}
+
+function describeHttp(status, data, raw) {
+  const m = (data?.error?.message || (raw || '').slice(0, 400) || '').trim();
+  const st = data?.error?.status ? ' ' + data.error.status : '';
+  if (status === 429) return `Quota or rate limit exceeded (429${st}).\n${m}\n\nWait a minute and retry, or check your quota/billing in Google AI Studio.`;
+  if (status === 403) return `Access denied (403${st}). The API key may be invalid or restricted, the Generative Language API may be disabled, or this model needs a project with billing enabled.\n${m}`;
+  if (status === 401) return `Unauthorized (401${st}). Check your API key.\n${m}`;
+  if (status === 400 && /api key/i.test(m)) return `Invalid API key (400).\n${m}`;
+  if (status === 404) return `Model not found (404${st}). The model ID may have been renamed or retired — update MODELS at the top of this file.\n${m}`;
+  if (status === 413) return `Request too large (413). Use fewer or smaller reference images.\n${m}`;
+  if (status >= 500) return `Gemini server error (${status}${st}). The service may be overloaded — try again shortly.\n${m}`;
+  return `Request failed (${status}${st}).\n${m}`;
+}
+
+function parseResponse(d) {
+  if (!d) return { error: 'The API returned an empty or unreadable response.', texts: [] };
+  const pf = d.promptFeedback;
+  const cand = (d.candidates || [])[0];
+  if (!cand) {
+    if (pf?.blockReason) return { error: `${BLOCK_REASONS[pf.blockReason] || 'Your prompt was blocked.'} (blockReason: ${pf.blockReason})${pf.blockReasonMessage ? '\n' + pf.blockReasonMessage : ''}`, texts: [] };
+    return { error: 'The API returned no candidates.', texts: [] };
+  }
+  let img = null; const texts = [];
+  for (const p of cand.content?.parts || []) {
+    if (p.thought) continue; // interim "thinking" images/text — not the final output
+    const inl = p.inlineData || p.inline_data;
+    if (inl?.data) img = { b64: inl.data, mime: inl.mimeType || inl.mime_type || 'image/png' };
+    else if (typeof p.text === 'string' && p.text.trim()) texts.push(p.text.trim());
+  }
+  let error = null;
+  const fr = cand.finishReason;
+  if (!img) {
+    if (fr && fr !== 'STOP') error = `${FINISH_REASONS[fr] || 'Generation stopped.'} (finishReason: ${fr})${cand.finishMessage ? '\n' + cand.finishMessage : ''}`;
+    else if (pf?.blockReason) error = `${BLOCK_REASONS[pf.blockReason] || 'Your prompt was blocked.'} (blockReason: ${pf.blockReason})`;
+    else if (!texts.length) error = 'The model returned neither an image nor text.';
+  }
+  return { img, texts, error, finishReason: fr };
+}
+
+async function start() {
+  if (running) return;
+  const key = keyEl.value.trim();
+  if (!key) { toast('Paste your Gemini API key first', true); keyEl.focus(); return; }
+  const prompt = promptEl.value.trim();
+  if (!prompt && !refs.length) { toast('Write a prompt first', true); promptEl.focus(); return; }
+  const model = modelById(S.model);
+  if (refs.length > model.maxRefs) { toast(`${model.label} accepts up to ${model.maxRefs} reference images`, true); return; }
+
+  // permission prompts need a user gesture — do it now, before the long request
+  if (S.saveToFolder && dirHandle && dirPerm !== 'granted') await requestDirPerm();
+
+  const rec = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    createdAt: Date.now(),
+    model: model.id, modelLabel: model.label,
+    prompt, aspectRatio: S.ratio, imageSize: S.size,
+    refThumbs: refs.map(r => r.thumb),
+  };
+  const ctrl = new AbortController();
+  const card = renderPendingCard(rec, () => ctrl.abort());
+  running = { ctrl, t0: performance.now(), card };
+  running.timer = setInterval(() => {
+    renderStart();
+    const el = card.querySelector('.elapsed');
+    if (el) el.textContent = ((performance.now() - running.t0) / 1000).toFixed(1) + 's';
+  }, 100);
+  renderStart();
+
+  try {
+    const parts = [];
+    if (prompt) parts.push({ text: prompt });
+    for (const r of refs) parts.push({ inlineData: { mimeType: r.mime, data: await blobToB64(r.blob) } });
+    const imageConfig = { imageSize: S.size };
+    if (S.ratio !== 'auto') imageConfig.aspectRatio = S.ratio;
+    const body = {
+      contents: [{ role: 'user', parts }],
+      generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig },
+    };
+
+    let res;
+    try {
+      res = await fetch(API_BASE + encodeURIComponent(model.id) + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      throw new GenError('Could not reach the Gemini API (network error). Check your connection.\nIf you opened this file via file:// and requests are being blocked, serve it locally instead:\n  python3 -m http.server   →   http://localhost:8000');
+    }
+    const raw = await res.text();
+    let data = null; try { data = JSON.parse(raw); } catch {}
+    if (!res.ok) throw new GenError(describeHttp(res.status, data, raw));
+
+    const out = parseResponse(data);
+    rec.durationMs = performance.now() - running.t0;
+    rec.texts = out.texts;
+    rec.finishReason = out.finishReason;
+    if (out.img) {
+      rec.status = 'ok';
+      rec.blob = b64ToBlob(out.img.b64, out.img.mime);
+      const th = await makeThumb(rec.blob, PREVIEW_MAX);
+      rec.preview = th.blob; rec.width = th.w; rec.height = th.h;
+      rec.cost = priceOf(model.id, S.size);
+      addCost(rec.cost);
+    } else if (out.error) {
+      rec.status = 'error'; rec.error = out.error; rec.cost = 0;
+    } else {
+      rec.status = 'text'; rec.cost = 0; // model replied with text only
+    }
+    await persistAndShow(rec, card);
+    if (rec.status === 'ok' && S.saveToFolder && dirHandle) {
+      saveRecordToFolder(rec).then(n => toast('Saved to folder: ' + n)).catch(e => toast('Folder save failed: ' + e.message, true, 5000));
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') { card.remove(); toast('Generation cancelled'); updateHistCount(); }
+    else {
+      rec.status = 'error'; rec.cost = 0;
+      rec.durationMs = performance.now() - running.t0;
+      rec.error = e instanceof GenError ? e.message : 'Unexpected error: ' + (e.message || e);
+      await persistAndShow(rec, card);
+    }
+  } finally {
+    clearInterval(running.timer);
+    running = null;
+    renderStart();
+  }
+}
+async function persistAndShow(rec, card) {
+  try { await db.put(rec); }
+  catch (e) { toast('Could not save to history (storage full?): ' + e.message, true, 5000); }
+  card.replaceWith(renderCard(rec));
+  updateHistCount();
+}
+
+/* =====================================================================
+   HISTORY FEED
+   ===================================================================== */
+const feed = $('feed');
+$('histIcon').innerHTML = ICON.history;
+function objUrl(id, blob) {
+  const u = URL.createObjectURL(blob);
+  if (!urlCache.has(id)) urlCache.set(id, []);
+  urlCache.get(id).push(u);
+  return u;
+}
+function freeUrls(id) { (urlCache.get(id) || []).forEach(u => URL.revokeObjectURL(u)); urlCache.delete(id); }
+
+function chipsFor(rec) {
+  const chips = [
+    h('span', { class: 'chip' }, rec.modelLabel),
+    h('span', { class: 'chip' }, rec.imageSize + ' · ' + (QUALITIES.find(q => q.size === rec.imageSize)?.name || '')),
+    h('span', { class: 'chip' }, rec.aspectRatio === 'auto' ? 'Auto ratio' : rec.aspectRatio),
+  ];
+  if (rec.width) chips.push(h('span', { class: 'chip' }, `${rec.width}×${rec.height}`));
+  if (rec.durationMs) chips.push(h('span', { class: 'chip' }, (rec.durationMs / 1000).toFixed(1) + 's'));
+  if (rec.status === 'ok') chips.push(h('span', { class: 'chip ok' }, '≈ ' + money(rec.cost || 0)));
+  if (rec.status === 'error') chips.push(h('span', { class: 'chip bad' }, 'Failed'));
+  if (rec.status === 'text') chips.push(h('span', { class: 'chip' }, 'Text only'));
+  return h('div', { class: 'chips' }, chips);
+}
+function promptEl_(rec) {
+  if (!rec.prompt) return h('p', { class: 'card-prompt none' }, '(no prompt — references only)');
+  const p = h('p', { class: 'card-prompt', title: 'Click to expand' }, rec.prompt);
+  p.onclick = () => p.classList.toggle('expanded');
+  return p;
+}
+function refsRow(rec) {
+  if (!rec.refThumbs?.length) return null;
+  return h('div', { class: 'card-refs' }, h('span', {}, 'References'),
+    rec.refThumbs.map((b, i) => {
+      const u = objUrl(rec.id, b);
+      return h('img', { src: u, alt: 'reference ' + (i + 1), loading: 'lazy', onclick: () => openLightbox(u, `Reference ${i + 1} (thumbnail)`) });
+    }));
+}
+function modelText(rec) {
+  if (!rec.texts?.length) return null;
+  return h('div', { class: 'model-text' }, h('span', { class: 'who' }, 'Model'), rec.texts.join('\n\n'));
+}
+function renderCard(rec) {
+  const time = h('span', { class: 'time', 'data-ts': rec.createdAt, title: new Date(rec.createdAt).toLocaleString() }, relTime(rec.createdAt));
+  const copyBtn = rec.prompt ? h('button', { class: 'icon-btn bordered', type: 'button', title: 'Copy prompt', html: ICON.copy,
+    onclick: async () => { try { await navigator.clipboard.writeText(rec.prompt); toast('Prompt copied'); } catch { toast('Clipboard not available', true); } } }) : null;
+  const dlBtn = rec.status === 'ok' ? h('button', { class: 'icon-btn bordered', type: 'button', title: 'Download full resolution', html: ICON.download, onclick: () => downloadRecord(rec) }) : null;
+  const delBtn = h('button', { class: 'icon-btn bordered danger', type: 'button', title: 'Delete', html: ICON.trash });
+  const card = h('article', { class: 'card', 'data-id': rec.id },
+    h('header', { class: 'card-head' }, promptEl_(rec),
+      h('div', { class: 'card-actions' }, copyBtn, dlBtn, delBtn, h('span', { class: 'sep' }), time)),
+    chipsFor(rec));
+
+  if (rec.status === 'ok') {
+    const img = h('img', { class: 'result-img', src: objUrl(rec.id, rec.preview), alt: rec.prompt || 'generated image', loading: 'lazy',
+      width: rec.width, height: rec.height, style: `aspect-ratio:${rec.width}/${rec.height}` });
+    img.onclick = () => openLightbox(URL.createObjectURL(rec.blob), `${rec.width}×${rec.height} · ${rec.modelLabel}`, rec, true);
+    card.append(img);
+  } else if (rec.status === 'error') {
+    card.append(h('div', { class: 'err' }, h('b', {}, 'Error'), rec.error));
+  }
+  const mt = modelText(rec); if (mt) card.append(mt);
+  const rr = refsRow(rec); if (rr) card.append(rr);
+
+  delBtn.onclick = async () => {
+    if (!confirm('Delete this generation from history?')) return;
+    try { await db.del(rec.id); } catch (e) { toast('Delete failed: ' + e.message, true); return; }
+    freeUrls(rec.id); card.remove(); updateHistCount();
+  };
+  return card;
+}
+function renderPendingCard(rec, onCancel) {
+  const ratio = rec.aspectRatio === 'auto' ? '1/1' : rec.aspectRatio.replace(':', '/');
+  const card = h('article', { class: 'card pending' },
+    h('header', { class: 'card-head' }, promptEl_(rec),
+      h('div', { class: 'card-actions' }, h('button', { class: 'text-btn', type: 'button', onclick: onCancel }, 'Cancel'))),
+    chipsFor(rec),
+    h('div', { class: 'pending-box', style: `aspect-ratio:${ratio};max-height:420px` },
+      h('div', { class: 'pending-inner' }, h('span', { class: 'spinner' }), h('span', { class: 'elapsed' }, '0.0s'), h('span', {}, 'Generating…'))));
+  const rr = refsRow(rec); if (rr) card.append(rr);
+  feed.querySelector('.empty')?.remove();
+  feed.prepend(card);
+  feed.scrollTop = 0;
+  return card;
+}
+function updateHistCount() {
+  const n = feed.querySelectorAll('.card:not(.pending)').length;
+  $('histCount').textContent = n ? `${n} item${n === 1 ? '' : 's'}` : '';
+  if (!feed.querySelector('.card')) {
+    feed.replaceChildren(h('div', { class: 'empty' }, h('div', { class: 'big' }, '🍌'),
+      h('div', {}, `No generations yet. Write a prompt and press Start (${isMac ? '⌘' : 'Ctrl'}+Enter).`)));
+  }
+}
+async function loadHistory() {
+  let recs = [];
+  try { recs = await db.all(); }
+  catch (e) { toast('Could not open history database: ' + e.message, true, 6000); }
+  recs.sort((a, b) => b.createdAt - a.createdAt);
+  feed.replaceChildren(...recs.map(renderCard));
+  updateHistCount();
+}
+setInterval(() => document.querySelectorAll('.time[data-ts]').forEach(t => { t.textContent = relTime(+t.dataset.ts); }), 30000);
+
+/* lightbox */
+let lbRec = null, lbOwnedUrl = null;
+$('lbClose').innerHTML = ICON.xl;
+$('lbDownload').innerHTML = ICON.download;
+function openLightbox(url, meta, rec = null, owned = false) {
+  if (lbOwnedUrl) URL.revokeObjectURL(lbOwnedUrl);
+  lbOwnedUrl = owned ? url : null;
+  lbRec = rec;
+  $('lbImg').src = url;
+  $('lbMeta').textContent = meta || '';
+  $('lbDownload').hidden = !rec;
+  $('lightbox').hidden = false;
+}
+function closeLightbox() {
+  $('lightbox').hidden = true; $('lbImg').removeAttribute('src'); lbRec = null;
+  if (lbOwnedUrl) { URL.revokeObjectURL(lbOwnedUrl); lbOwnedUrl = null; }
+}
+$('lightbox').addEventListener('click', e => { if (e.target === $('lightbox')) closeLightbox(); });
+$('lbClose').onclick = closeLightbox;
+$('lbDownload').onclick = () => lbRec && downloadRecord(lbRec);
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+function renderAll() { renderModel(); renderRatio(); renderQuality(); renderFormat(); renderRefs(); renderCost(); }
+renderAll(); renderCount(); renderStart(); renderFolder();
+loadHistory();
+(async () => {
+  if (!fsSupported) return;
+  try { dirHandle = (await db.kvGet('dirHandle')) || null; } catch {}
+  await refreshDirPerm();
+  renderFolder();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Secrets — the app keeps the API key in browser localStorage, never in files,
+# but guard against keys saved locally by hand.
+.env
+.env.*
+*.key
+*api-key*
+*apikey*
+secrets.*
+
+# Generated images / auto-save folders
+*.png
+*.jpg
+*.jpeg
+*.webp
+output/
+generations/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
