@@ -398,6 +398,16 @@ const PREVIEW_MAX = 900;      // px, feed preview (webp)
 const REF_THUMB_MAX = 160;    // px, reference thumbnails stored with history
 const JPG_QUALITY = 0.95;
 
+// Safety filters: the developer-adjustable categories are set to the minimum to cut
+// false positives on ordinary portraits. Google's non-configurable filters
+// (e.g. child safety) still apply and cannot be turned off.
+const SAFETY_SETTINGS = [
+  'HARM_CATEGORY_HARASSMENT',
+  'HARM_CATEGORY_HATE_SPEECH',
+  'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+  'HARM_CATEGORY_DANGEROUS_CONTENT',
+].map(category => ({ category, threshold: 'BLOCK_NONE' }));
+
 /* ---------- icons ---------- */
 const I = (d, s = 18, extra = '') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
 const ICON = {
@@ -932,6 +942,7 @@ async function start() {
     const body = {
       contents: [{ role: 'user', parts }],
       generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig },
+      safetySettings: SAFETY_SETTINGS,
     };
 
     let res;
