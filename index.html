@@ -132,8 +132,16 @@ svg { display: block; }
 }
 .ref-add:hover { color: var(--accent); border-color: var(--accent); }
 .ref-add:disabled { opacity: .35; cursor: not-allowed; }
-.ref { position: relative; width: 46px; height: 46px; }
+.ref { position: relative; width: 46px; height: 46px; cursor: grab; }
 .ref img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 1px solid var(--line-2); }
+.ref.dragging { opacity: .35; }
+.ref.over img { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ref .num { top: auto; bottom: -6px; }
+.num {
+  position: absolute; top: -6px; left: -6px; min-width: 19px; height: 19px; padding: 0 4px; border-radius: 10px;
+  background: var(--accent); color: var(--accent-ink); border: 2px solid var(--panel-2);
+  font: 700 10.5px/15px ui-monospace, Menlo, monospace; text-align: center; pointer-events: none;
+}
 .ref .x {
   position: absolute; top: -6px; right: -6px; width: 19px; height: 19px; border-radius: 50%;
   background: #f1f1f1; color: #111; border: 2px solid var(--panel-2); display: grid; place-items: center; padding: 0;
@@ -168,6 +176,8 @@ svg { display: block; }
 .tile .sub { color: var(--muted); font-size: 12px; }
 .tile.sel .sub { color: var(--accent); }
 .tile .price { color: var(--faint); font-size: 11px; }
+.tiles.factor { grid-template-columns: repeat(3, 1fr); }
+.tile:disabled { opacity: .4; cursor: not-allowed; border-color: transparent; }
 .shape { border: 1.6px solid currentColor; border-radius: 3px; }
 .shape.dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; border: 0; margin-bottom: 6px; }
 .fmt-list { min-width: 170px; }
@@ -178,6 +188,35 @@ svg { display: block; }
 .folder-info { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin: -4px 0 0 26px; flex-wrap: wrap; }
 .folder-info .name { font-family: ui-monospace, Menlo, monospace; color: var(--text); }
 .folder-info .warn { color: var(--warn); }
+
+/* ---------- upscale ---------- */
+.up-drop {
+  position: relative; min-height: 132px; border: 1.5px dashed var(--line-2); border-radius: var(--radius); background: var(--panel-2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px;
+  color: var(--muted); cursor: pointer; text-align: center; transition: border-color .15s, background .15s;
+}
+.up-drop:hover { border-color: var(--muted); }
+.up-drop.drag { border-color: var(--accent); background: var(--accent-soft); }
+.up-drop img { max-width: 100%; max-height: 220px; border-radius: 8px; }
+.up-drop .x {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0;
+  background: #f1f1f1; color: #111; display: grid; place-items: center;
+}
+.up-drop .x:hover { background: var(--danger); }
+.up-meta { font-size: 12px; color: var(--muted); }
+.up-meta b { color: var(--text); font-weight: 600; }
+.sliders { display: grid; gap: 4px; margin: 4px 0 0 26px; }
+.sliders.off { opacity: .4; }
+.slider { display: grid; grid-template-columns: 76px 1fr 36px; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.slider input { accent-color: var(--accent); margin: 0; }
+.slider output { font: 12px ui-monospace, Menlo, monospace; color: var(--text); text-align: right; }
+.up-summary { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.up-summary b { color: var(--text); font-weight: 600; }
+.up-summary .bad { color: var(--danger); }
+.foot-btns { display: flex; gap: 8px; }
+.cancel-btn { flex: none; height: 52px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--panel-2); font-weight: 600; }
+.cancel-btn:hover { color: var(--danger); border-color: rgba(255,122,112,.4); }
+.card-warn { margin-top: 10px; font-size: 12.5px; color: var(--warn); }
 
 /* ---------- start ---------- */
 .start {
@@ -238,6 +277,8 @@ svg { display: block; }
 .card-refs { display: flex; gap: 6px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
 .card-refs span { font-size: 11.5px; color: var(--faint); margin-right: 4px; }
 .card-refs img { width: 36px; height: 36px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line-2); cursor: zoom-in; }
+.card-ref { position: relative; }
+.card-ref .num { top: -5px; left: -5px; min-width: 16px; height: 16px; font-size: 9.5px; line-height: 12px; border-color: #121417; }
 
 .pending-box {
   position: relative; max-width: 420px; border-radius: 12px; overflow: hidden; background: var(--panel-2);
@@ -266,6 +307,28 @@ svg { display: block; }
 .toast.bad { border-color: rgba(255,122,112,.4); color: #ffc9c4; }
 @keyframes tin { from { opacity: 0; transform: translateY(6px); } }
 
+/* ---------- before/after viewer ---------- */
+.cmp { position: fixed; inset: 0; z-index: 100; background: rgba(5,6,8,.96); display: flex; flex-direction: column; }
+.cmp-bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; }
+.cmp-bar .meta { flex: 1; color: var(--muted); font-size: 12px; }
+.cmp-bar .seg { width: 150px; padding: 3px; }
+.cmp-bar .seg button { padding: 5px; }
+.cmp-bar .icon-btn { background: rgba(255,255,255,.08); color: var(--text); }
+.cmp .err { margin: 0 16px 10px; }
+.cmp-view { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: ew-resize; touch-action: none; user-select: none; }
+.cmp-view.pannable { cursor: grab; }
+.cmp-view.pannable:active { cursor: grabbing; }
+.cmp-stage { position: absolute; left: 0; top: 0; }
+.cmp-stage img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cmp-div { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); cursor: ew-resize; }
+.cmp-div::before { content: ""; position: absolute; inset: 0 -12px; }
+.cmp-div span {
+  position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: #fff; color: #111; display: grid; place-items: center; box-shadow: var(--shadow); font-weight: 700; font-size: 13px;
+}
+.cmp-tag { position: absolute; top: 12px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; pointer-events: none; }
+.cmp-tag.l { left: 12px; } .cmp-tag.r { right: 12px; }
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #2c3036; border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -289,6 +352,10 @@ svg { display: block; }
       <div class="left-scroll">
 
         <div class="section">
+          <div class="seg" id="modeSeg"></div>
+        </div>
+
+        <div class="section gen-only">
           <div class="label"><strong>Provider</strong></div>
           <div class="seg" id="providerSeg"></div>
           <div class="hint provider-note" id="providerNote" hidden></div>
@@ -306,7 +373,37 @@ svg { display: block; }
           </div>
         </div>
 
-        <div class="section">
+        <div class="section up-only" hidden>
+          <div class="label"><strong>Photo</strong></div>
+          <div class="up-drop" id="upDrop" title="Drop, paste or click to choose a photo"></div>
+          <input type="file" id="upFile" accept="image/jpeg,image/png,image/webp" hidden>
+          <div class="hint provider-note warn" id="upNote" hidden>Replicate blocks direct browser requests. Run <code>python3 server.py</code> and open <code>http://localhost:8787</code>.</div>
+        </div>
+
+        <div class="section up-only" hidden>
+          <div class="label"><strong>Upscale factor</strong></div>
+          <div class="tiles factor" id="factorTiles"></div>
+        </div>
+
+        <div class="section up-only" hidden>
+          <div class="label"><strong>Model</strong><span class="hint">Topaz Labs</span></div>
+          <div class="dd">
+            <button class="dd-trigger" id="upModelTrigger" type="button"><span class="grow" id="upModelName"></span><span class="chev"></span></button>
+            <div class="pop" id="upModelPop" hidden></div>
+          </div>
+        </div>
+
+        <div class="section up-only" hidden>
+          <div class="toggle-row">
+            <label><input type="checkbox" id="upFace"> <span class="row-label">Face enhancement</span></label>
+          </div>
+          <div class="sliders" id="upSliders">
+            <label class="slider"><span>Strength</span><input type="range" id="upStrength" min="0" max="1" step="0.05"><output id="upStrengthVal"></output></label>
+            <label class="slider"><span>Creativity</span><input type="range" id="upCreativity" min="0" max="1" step="0.05"><output id="upCreativityVal"></output></label>
+          </div>
+        </div>
+
+        <div class="section gen-only">
           <div class="label"><strong>Model</strong></div>
           <div class="dd" id="modelDd">
             <button class="dd-trigger" id="modelTrigger" type="button">
@@ -316,7 +413,7 @@ svg { display: block; }
           </div>
         </div>
 
-        <div class="section">
+        <div class="section gen-only">
           <div class="label"><strong>Prompt</strong><span class="char-count" id="charCount">0 / 10,000</span></div>
           <div class="prompt-box" id="promptBox">
             <textarea id="prompt" placeholder="Describe the image you want… Drop, paste or add reference images below."></textarea>
@@ -326,9 +423,10 @@ svg { display: block; }
             <input type="file" id="fileInput" accept="image/*" multiple hidden>
           </div>
           <div class="refs-count" id="refsCount">Reference images: 0 / 14</div>
+          <div class="hint">Refer to them as image 1, image 2… in your prompt.</div>
         </div>
 
-        <div class="section">
+        <div class="section gen-only">
           <div class="row">
             <span class="row-label">Aspect ratio</span>
             <button class="row-trigger" id="ratioTrigger" type="button"><span class="val" id="ratioVal"></span><span class="chev"></span></button>
@@ -346,7 +444,7 @@ svg { display: block; }
           </div>
         </div>
 
-        <div class="section">
+        <div class="section gen-only">
           <div class="toggle-row">
             <label><input type="checkbox" id="saveFolder"> <span class="row-label">Save to folder</span></label>
           </div>
@@ -355,7 +453,11 @@ svg { display: block; }
       </div>
 
       <div class="left-foot">
-        <button class="start" id="startBtn" type="button"></button>
+        <div class="up-summary up-only" id="upSummary" hidden></div>
+        <div class="foot-btns">
+          <button class="start" id="startBtn" type="button"></button>
+          <button class="cancel-btn" id="cancelBtn" type="button" hidden>Cancel</button>
+        </div>
         <div class="cost">
           <span>This run ≈ <b id="runCost">$0.000</b></span>
           <span class="totals">
@@ -386,6 +488,20 @@ svg { display: block; }
     <button class="icon-btn" id="lbClose" title="Close (Esc)" type="button"></button>
   </div>
   <img id="lbImg" alt="">
+</div>
+<div class="cmp" id="cmp" hidden>
+  <div class="cmp-bar">
+    <span class="meta" id="cmpMeta"></span>
+    <div class="seg" id="cmpZoom"><button type="button" data-zoom="fit">Fit</button><button type="button" data-zoom="1">100%</button></div>
+    <button class="icon-btn" id="cmpDownload" title="Download the upscaled image (original file)" type="button"></button>
+    <button class="icon-btn" id="cmpClose" title="Close (Esc)" type="button"></button>
+  </div>
+  <div class="err" id="cmpMsg" hidden></div>
+  <div class="cmp-view" id="cmpView">
+    <div class="cmp-stage" id="cmpStage"><img id="cmpAfter" alt="upscaled" draggable="false"><img id="cmpBefore" alt="original" draggable="false"></div>
+    <div class="cmp-div" id="cmpDiv"><span>⇔</span></div>
+    <span class="cmp-tag l">Original</span><span class="cmp-tag r">Upscaled</span>
+  </div>
 </div>
 <div class="toast-wrap" id="toasts"></div>
 
@@ -421,6 +537,20 @@ const PROVIDERS = {
   replicate: { label: 'Replicate', keyLabel: 'Replicate API token', storeKey: 'nbs.replicateToken', placeholder: 'r8_…',
     link: 'https://replicate.com/account/api-tokens', linkText: 'Get a token ↗', defaultModel: 'google/nano-banana-pro' },
 };
+/* Upscale: Topaz Labs on Replicate (checked 2026-10-09, replicate.com/topazlabs/image-upscale).
+   Billed by output megapixels: the first tier >= the output MP. */
+const TOPAZ = { id: 'topazlabs/image-upscale', label: 'Topaz Upscale' };
+const TOPAZ_MODELS = [
+  { id: 'Standard V2', hint: 'General purpose' },
+  { id: 'High Fidelity V2', hint: 'Preserves details' },
+  { id: 'Low Resolution V2', hint: 'Small or blurry sources' },
+  { id: 'CGI', hint: 'Renders and digital art' },
+];
+const TOPAZ_FACTORS = [2, 4, 6];
+const TOPAZ_PRICES = [[12, 0.05], [24, 0.05], [36, 0.10], [48, 0.10], [60, 0.15], [96, 0.20], [132, 0.24], [168, 0.29], [336, 0.53], [512, 0.82]];
+const TOPAZ_MAX_MP = 512;
+const UPSCALE_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+const REPLICATE_FILE_MAX = 100 * 1024 * 1024;
 const RATIOS = ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '16:9', '9:16', '21:9'];
 const QUALITIES = [
   { size: '1K', name: 'Standard' },
@@ -458,6 +588,7 @@ const ICON = {
   trash: I('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', 16),
   history: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', 16),
   spark: I('<path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/>', 18),
+  expand: I('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>', 18),
   google: `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>`,
 };
 
@@ -539,6 +670,32 @@ async function makeThumb(blob, max) {
   const { canvas, w, h: hh } = await drawScaled(blob, max);
   return { blob: await canvasToBlob(canvas, 'image/webp', 0.85), w, h: hh };
 }
+// Upscale outputs can be hundreds of megapixels: read the size from the header via <img>
+// and let createImageBitmap do the resize, so no full-size canvas is ever allocated.
+function imageSize(blob) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(blob), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); res({ w: im.naturalWidth, h: im.naturalHeight }); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Could not read the image')); };
+    im.src = u;
+  });
+}
+async function makeBigThumb(blob, w, hh, max) {
+  const s = Math.min(1, max / Math.max(w, hh));
+  const rw = Math.max(1, Math.round(w * s)), rh = Math.max(1, Math.round(hh * s));
+  const bmp = await createImageBitmap(blob, { resizeWidth: rw, resizeHeight: rh, resizeQuality: 'high' });
+  const c = document.createElement('canvas');
+  c.width = rw; c.height = rh;
+  c.getContext('2d').drawImage(bmp, 0, 0);
+  bmp.close?.();
+  return canvasToBlob(c, 'image/webp', 0.85);
+}
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
 
 /* ---------- IndexedDB ---------- */
 const DB_NAME = 'nano-banana-studio';
@@ -586,11 +743,20 @@ const S = {
   size: QUALITIES.some(q => q.size === saved.size) ? saved.size : '1K',
   format: saved.format === 'jpg' ? 'jpg' : 'png',
   saveToFolder: !!saved.saveToFolder,
+  mode: saved.mode === 'upscale' ? 'upscale' : 'generate',
+  up: {
+    model: TOPAZ_MODELS.some(m => m.id === saved.up?.model) ? saved.up.model : 'Standard V2',
+    factor: TOPAZ_FACTORS.includes(saved.up?.factor) ? saved.up.factor : 2,
+    face: !!saved.up?.face,
+    strength: Number.isFinite(saved.up?.strength) ? saved.up.strength : 0.8,
+    creativity: Number.isFinite(saved.up?.creativity) ? saved.up.creativity : 0,
+  },
 };
 // S.model = selected model of the active provider (non-enumerable, so not saved twice)
 Object.defineProperty(S, 'model', { get: () => S.models[S.provider], set: v => { S.models[S.provider] = v; } });
 const saveSettings = () => store.set('nbs.settings', S);
 let refs = [];           // { blob, mime, url, thumb }
+let upSrc = null;        // photo to upscale: { blob, name, w, h, url }
 let running = null;      // { ctrl, t0, timer, card }
 let dirHandle = null;
 let dirPerm = 'none';    // 'granted' | 'prompt' | 'denied' | 'none'
@@ -603,7 +769,7 @@ const urlCache = new Map(); // id -> [objectURLs]
 /* API key */
 /* Each provider has its own key, stored under its own localStorage entry. */
 const keyEl = $('apiKey');
-const prov = () => PROVIDERS[S.provider];
+const prov = () => PROVIDERS[S.mode === 'upscale' ? 'replicate' : S.provider]; // Upscale always runs on Replicate
 const setKeyEye = () => { $('toggleKey').innerHTML = keyEl.type === 'password' ? ICON.eye : ICON.eyeOff; };
 setKeyEye();
 $('toggleKey').onclick = () => { keyEl.type = keyEl.type === 'password' ? 'text' : 'password'; setKeyEye(); };
@@ -618,6 +784,17 @@ function renderKey() {
   keyEl.value = store.get(p.storeKey, '') || '';
   keyEl.type = 'password'; setKeyEye();
   updKeyStatus();
+}
+
+/* mode */
+function renderMode() {
+  $('modeSeg').replaceChildren(...[['generate', 'Generate'], ['upscale', 'Upscale']].map(([id, label]) => h('button', {
+    type: 'button', class: id === S.mode ? 'sel' : '',
+    onclick: () => { if (id === S.mode) return; S.mode = id; saveSettings(); closePops(); renderKey(); renderAll(); },
+  }, label)));
+  const up = S.mode === 'upscale';
+  document.querySelectorAll('.gen-only').forEach(el => { el.hidden = up; });
+  document.querySelectorAll('.up-only').forEach(el => { el.hidden = !up; });
 }
 
 /* provider */
@@ -637,7 +814,7 @@ function renderProvider() {
 }
 
 /* popovers */
-const POPS = [['modelTrigger', 'modelPop'], ['ratioTrigger', 'ratioPop'], ['qualityTrigger', 'qualityPop'], ['formatTrigger', 'formatPop']];
+const POPS = [['modelTrigger', 'modelPop'], ['ratioTrigger', 'ratioPop'], ['qualityTrigger', 'qualityPop'], ['formatTrigger', 'formatPop'], ['upModelTrigger', 'upModelPop']];
 function closePops() { for (const [t, p] of POPS) { $(p).hidden = true; $(t).classList.remove('open'); } }
 for (const [t, p] of POPS) {
   $(t).addEventListener('click', e => {
@@ -736,11 +913,28 @@ async function addRefFiles(files) {
   }
   renderRefs();
 }
+// The badge number is the position the image is sent in (Google: "Image N:" label; Replicate: image_input order).
+let dragRef = null;      // index of the reference being dragged to a new position
 function renderRefs() {
   const max = modelById(S.model).maxRefs;
-  const thumbs = refs.map((r, i) => h('div', { class: 'ref' },
-    h('img', { src: r.url, alt: 'reference ' + (i + 1) }),
-    h('button', { class: 'x', type: 'button', title: 'Remove', html: ICON.x, onclick: () => { URL.revokeObjectURL(r.url); refs.splice(i, 1); renderRefs(); } })));
+  const thumbs = refs.map((r, i) => {
+    const el = h('div', { class: 'ref', draggable: 'true', title: `Image ${i + 1} · drag to reorder` },
+      h('img', { src: r.url, alt: 'reference ' + (i + 1), draggable: 'false' }),
+      h('span', { class: 'num' }, i + 1),
+      h('button', { class: 'x', type: 'button', title: 'Remove', html: ICON.x, onclick: () => { URL.revokeObjectURL(r.url); refs.splice(i, 1); renderRefs(); } }));
+    el.addEventListener('dragstart', e => { dragRef = i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); el.classList.add('dragging'); });
+    el.addEventListener('dragend', () => { dragRef = null; el.classList.remove('dragging'); });
+    el.addEventListener('dragover', e => { if (dragRef == null) return; e.preventDefault(); el.classList.add('over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('over'));
+    el.addEventListener('drop', e => {
+      if (dragRef == null) return;
+      e.preventDefault(); e.stopPropagation();
+      refs.splice(i, 0, ...refs.splice(dragRef, 1));
+      dragRef = null;
+      renderRefs();
+    });
+    return el;
+  });
   $('refs').replaceChildren($('addRef'), ...thumbs);
   $('addRef').disabled = refs.length >= max;
   $('refsCount').textContent = `Reference images: ${refs.length} / ${max}`;
@@ -749,12 +943,15 @@ function renderRefs() {
 // drag & drop onto the whole left panel
 const dropZone = document.querySelector('aside.panel');
 let dragDepth = 0;
-dropZone.addEventListener('dragenter', e => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); dragDepth++; $('promptBox').classList.add('drag'); } });
+const dropTarget = () => $(S.mode === 'upscale' ? 'upDrop' : 'promptBox');
+const clearDrag = () => { dragDepth = 0; $('promptBox').classList.remove('drag'); $('upDrop').classList.remove('drag'); };
+dropZone.addEventListener('dragenter', e => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); dragDepth++; dropTarget().classList.add('drag'); } });
 dropZone.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
-dropZone.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('promptBox').classList.remove('drag'); } });
+dropZone.addEventListener('dragleave', () => { if (--dragDepth <= 0) clearDrag(); });
 dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dragDepth = 0; $('promptBox').classList.remove('drag');
-  addRefFiles([...(e.dataTransfer?.files || [])]);
+  e.preventDefault(); clearDrag();
+  const files = [...(e.dataTransfer?.files || [])];
+  if (S.mode === 'upscale') setUpSource(files[0]); else addRefFiles(files);
 });
 // prevent the browser from opening files dropped elsewhere
 window.addEventListener('dragover', e => e.preventDefault());
@@ -762,12 +959,87 @@ window.addEventListener('drop', e => e.preventDefault());
 // paste images from clipboard (anywhere on the page)
 document.addEventListener('paste', e => {
   const files = [...(e.clipboardData?.items || [])].filter(it => it.kind === 'file' && it.type.startsWith('image/')).map(it => it.getAsFile()).filter(Boolean);
-  if (files.length) { e.preventDefault(); addRefFiles(files); }
+  if (!files.length) return;
+  e.preventDefault();
+  if (S.mode === 'upscale') setUpSource(files[0]); else addRefFiles(files);
 });
+
+/* upscale panel */
+const topazPrice = mp => TOPAZ_PRICES.find(([max]) => mp <= max)?.[1] ?? null; // null = over the largest tier
+const upOut = f => { const w = upSrc.w * f, hh = upSrc.h * f; return { w, h: hh, mp: w * hh / 1e6 }; };
+const fmtMP = mp => (mp < 10 ? mp.toFixed(1) : Math.round(mp)) + ' MP';
+const fmtBytes = b => b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + ' MB';
+$('upDrop').onclick = () => $('upFile').click();
+$('upFile').onchange = e => { setUpSource(e.target.files[0]); e.target.value = ''; };
+async function setUpSource(file) {
+  if (!file) return;
+  if (!UPSCALE_MIME.includes(file.type)) { toast('Use a JPG, PNG or WebP photo for upscaling', true, 4000); return; }
+  if (file.size > REPLICATE_FILE_MAX) { toast('That file is over 100 MB, the Replicate upload limit', true, 4000); return; }
+  let size;
+  try { size = await imageSize(file); }
+  catch { toast(`Couldn't read "${file.name || 'image'}"`, true); return; }
+  if (upSrc) URL.revokeObjectURL(upSrc.url);
+  upSrc = { blob: file, name: file.name || 'pasted image', w: size.w, h: size.h, url: URL.createObjectURL(file) };
+  renderUpscale(); renderCost();
+}
+function renderUpscale() {
+  $('upNote').hidden = ON_LOCALHOST;
+  if (S.mode === 'upscale') $('crumbModel').textContent = TOPAZ.label + ' · Replicate';
+
+  // photo
+  $('upDrop').replaceChildren(...(upSrc ? [
+    h('img', { src: upSrc.url, alt: 'photo to upscale' }),
+    h('button', { class: 'x', type: 'button', title: 'Remove', html: ICON.x,
+      onclick: e => { e.stopPropagation(); URL.revokeObjectURL(upSrc.url); upSrc = null; renderUpscale(); renderCost(); } }),
+    h('div', { class: 'up-meta' }, h('b', {}, `${upSrc.w}×${upSrc.h}`), ` · ${fmtMP(upSrc.w * upSrc.h / 1e6)} · ${fmtBytes(upSrc.blob.size)}`),
+  ] : [h('span', { html: ICON.imgPlus }), h('span', {}, 'Drop, paste or click to choose a photo')]));
+
+  // factor
+  $('factorTiles').replaceChildren(...TOPAZ_FACTORS.map(f => {
+    const o = upSrc && upOut(f);
+    const tooBig = !!o && o.mp > TOPAZ_MAX_MP;
+    return h('button', {
+      class: 'tile' + (f === S.up.factor ? ' sel' : ''), type: 'button', disabled: tooBig,
+      title: tooBig ? `Output over ${TOPAZ_MAX_MP} MP` : null,
+      onclick: () => { S.up.factor = f; saveSettings(); renderAll(); },
+    }, h('b', {}, f + 'x'), h('span', { class: 'sub' }, o ? `${o.w}×${o.h}` : '—'),
+      h('span', { class: 'price' }, tooBig ? 'too large' : o ? money(topazPrice(o.mp)) : ''));
+  }));
+
+  // model
+  const m = TOPAZ_MODELS.find(mm => mm.id === S.up.model);
+  $('upModelName').replaceChildren(m.id, h('br'), h('small', { class: 'hint' }, m.hint));
+  $('upModelPop').replaceChildren(...TOPAZ_MODELS.map(mm => h('button', {
+    class: 'dd-item' + (mm.id === S.up.model ? ' sel' : ''), type: 'button',
+    onclick: () => { S.up.model = mm.id; saveSettings(); closePops(); renderUpscale(); },
+  }, h('span', { class: 'grow' }, mm.id, h('br'), h('small', {}, mm.hint)), h('span', { class: 'check', html: ICON.check }))));
+
+  // face enhancement
+  $('upFace').checked = S.up.face;
+  $('upSliders').classList.toggle('off', !S.up.face);
+  for (const k of ['strength', 'creativity']) {
+    const id = 'up' + k[0].toUpperCase() + k.slice(1);
+    $(id).value = S.up[k]; $(id).disabled = !S.up.face;
+    $(id + 'Val').textContent = S.up[k].toFixed(2);
+  }
+
+  // output size
+  const o = upSrc && upOut(S.up.factor);
+  $('upSummary').replaceChildren(...(o ? [
+    h('span', {}, 'Output ', h('b', {}, `${o.w}×${o.h}`), ` · ${fmtMP(o.mp)}`),
+    o.mp > TOPAZ_MAX_MP ? h('span', { class: 'bad' }, 'too large') : h('span', {}, '≈ ', h('b', {}, money(topazPrice(o.mp)))),
+  ] : [h('span', {}, 'Add a photo to see the output size')]));
+}
+$('upFace').onchange = e => { S.up.face = e.target.checked; saveSettings(); renderUpscale(); };
+for (const k of ['strength', 'creativity']) {
+  const id = 'up' + k[0].toUpperCase() + k.slice(1);
+  $(id).oninput = e => { S.up[k] = +e.target.value; saveSettings(); $(id + 'Val').textContent = S.up[k].toFixed(2); };
+}
 
 /* cost */
 function renderCost() {
-  $('runCost').textContent = money(priceOf(S.model, S.size));
+  const upCost = () => (upSrc && topazPrice(upOut(S.up.factor).mp)) || 0;
+  $('runCost').textContent = money(S.mode === 'upscale' ? upCost() : priceOf(S.model, S.size));
   $('sessionCost').textContent = money(sstore.get('nbs.sessionCost', 0));
   $('totalCost').textContent = money(store.get('nbs.totalCost', 0));
 }
@@ -785,18 +1057,21 @@ $('resetCost').onclick = () => {
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 function renderStart() {
   const b = $('startBtn');
+  const up = S.mode === 'upscale';
+  $('cancelBtn').hidden = !(running && up);
   if (running) {
     b.disabled = true;
-    b.replaceChildren(h('span', { class: 'spinner' }), `Generating… ${((performance.now() - running.t0) / 1000).toFixed(1)}s`);
+    b.replaceChildren(h('span', { class: 'spinner' }), `${running.upscale ? 'Upscaling' : 'Generating'}… ${((performance.now() - running.t0) / 1000).toFixed(1)}s`);
   } else {
     b.disabled = false;
-    b.replaceChildren(h('span', { html: ICON.spark }), 'Start', h('kbd', {}, isMac ? '⌘ ↵' : 'Ctrl ↵'));
+    b.replaceChildren(h('span', { html: up ? ICON.expand : ICON.spark }), up ? 'Upscale' : 'Start', h('kbd', {}, isMac ? '⌘ ↵' : 'Ctrl ↵'));
   }
 }
 $('startBtn').onclick = () => start();
+$('cancelBtn').onclick = () => running?.ctrl.abort();
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); start(); }
-  if (e.key === 'Escape') { closePops(); closeLightbox(); }
+  if (e.key === 'Escape') { closePops(); closeLightbox(); closeCompare(); }
 });
 
 /* =====================================================================
@@ -898,12 +1173,14 @@ async function exportImage(rec, fmt) {
   return { blob, name: `${fileBase(rec)}.${fmt}` };
 }
 async function downloadRecord(rec) {
+  // Upscales are saved byte-for-byte as Replicate returned them, never re-encoded.
+  if (rec.kind === 'upscale') {
+    const ext = rec.blob.type === 'image/jpeg' ? 'jpg' : 'png';
+    return saveBlob(rec.blob, `topaz_${stamp(rec.createdAt)}_${rec.enhanceModel.toLowerCase().replace(/\s+/g, '-')}_${rec.factor}.${ext}`);
+  }
   try {
     const { blob, name } = await exportImage(rec, S.format);
-    const url = URL.createObjectURL(blob);
-    const a = h('a', { href: url, download: name });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    saveBlob(blob, name);
   } catch (e) { toast('Download failed: ' + e.message, true); }
 }
 
@@ -974,6 +1251,7 @@ function parseResponse(d) {
 }
 
 async function start() {
+  if (S.mode === 'upscale') return startUpscale();
   if (running) return;
   const model = modelById(S.model);
   const isRep = model.provider === 'replicate';
@@ -1044,9 +1322,10 @@ async function start() {
 
 /* ---------- Google (Gemini API, direct) ---------- */
 async function runGoogle(rec, model, key, prompt, refList, signal) {
+  // Each reference is preceded by its "Image N:" label (matching the badge); the prompt comes last.
   const parts = [];
+  for (const [i, r] of refList.entries()) parts.push({ text: `Image ${i + 1}:` }, { inlineData: { mimeType: r.mime, data: await blobToB64(r.blob) } });
   if (prompt) parts.push({ text: prompt });
-  for (const r of refList) parts.push({ inlineData: { mimeType: r.mime, data: await blobToB64(r.blob) } });
   const imageConfig = { imageSize: rec.imageSize };
   if (rec.aspectRatio !== 'auto') imageConfig.aspectRatio = rec.aspectRatio;
   const body = {
@@ -1147,35 +1426,162 @@ async function runReplicate(rec, model, token, prompt, refList, signal) {
     rec.predictionId = pred.id;
 
     // 3. poll until it reaches a terminal state
-    while (!['succeeded', 'failed', 'canceled'].includes(pred.status)) {
-      await sleep(REPLICATE_POLL_MS, signal);
-      try { pred = await repFetch(`predictions/${pred.id}`, token, { signal }); }
-      catch (e) { if (e.status === 429) { await sleep(3000, signal); continue; } throw e; }
-    }
-    if (pred.status === 'canceled') { rec.error = 'The prediction was canceled on Replicate.'; return; }
-    if (pred.status === 'failed') {
-      const logTail = (pred.logs || '').trim().split('\n').slice(-5).join('\n');
-      rec.error = `Replicate prediction failed.\n${pred.error || logTail || 'No error message was returned.'}`;
-      return;
-    }
+    pred = await waitForPrediction(pred, token, signal);
+    if (predictionFailed(rec, pred)) return;
 
     // 4. succeeded → billed; download the image
     rec.cost = priceOf(model.id, rec.imageSize);
-    const outUrl = Array.isArray(pred.output) ? pred.output[0] : pred.output;
-    if (!outUrl) { rec.error = 'Replicate reported success but returned no output image.'; return; }
-    let res;
-    try { res = await fetch(ON_LOCALHOST ? '/fetch?url=' + encodeURIComponent(outUrl) : outUrl, { signal }); }
-    catch (e) { if (e.name === 'AbortError') throw e; res = null; }
-    if (!res || !res.ok) {
-      rec.error = `The image was generated (and billed) but downloading it failed${res ? ` (${res.status})` : ''}.\nIt stays available for about an hour at:\n${outUrl}`;
-      return;
-    }
-    let blob = await res.blob();
-    if (!blob.type.startsWith('image/')) blob = new Blob([blob], { type: S.format === 'jpg' ? 'image/jpeg' : 'image/png' });
-    rec.blob = blob;
+    await downloadOutput(rec, pred, S.format === 'jpg' ? 'image/jpeg' : 'image/png', signal);
   } finally {
     // uploaded references expire on their own; remove them early, best effort
     for (const f of files) repFetch(`files/${f.id}`, token, { method: 'DELETE' }).catch(() => {});
+  }
+}
+async function waitForPrediction(pred, token, signal) {
+  while (!['succeeded', 'failed', 'canceled'].includes(pred.status)) {
+    await sleep(REPLICATE_POLL_MS, signal);
+    try { pred = await repFetch(`predictions/${pred.id}`, token, { signal }); }
+    catch (e) { if (e.status === 429) { await sleep(3000, signal); continue; } throw e; }
+  }
+  return pred;
+}
+function predictionFailed(rec, pred) {
+  if (pred.status === 'canceled') { rec.error = 'The prediction was canceled on Replicate.'; return true; }
+  if (pred.status === 'failed') {
+    const logTail = (pred.logs || '').trim().split('\n').slice(-5).join('\n');
+    rec.error = `Replicate prediction failed.\n${pred.error || logTail || 'No error message was returned.'}`;
+    return true;
+  }
+  return false;
+}
+async function downloadOutput(rec, pred, fallbackMime, signal) {
+  const outUrl = Array.isArray(pred.output) ? pred.output[0] : pred.output;
+  if (!outUrl) { rec.error = 'Replicate reported success but returned no output image.'; return; }
+  let res;
+  try { res = await fetch(ON_LOCALHOST ? '/fetch?url=' + encodeURIComponent(outUrl) : outUrl, { signal }); }
+  catch (e) { if (e.name === 'AbortError') throw e; res = null; }
+  if (!res || !res.ok) {
+    rec.error = `The image was generated (and billed) but downloading it failed${res ? ` (${res.status})` : ''}.\nIt stays available for about an hour at:\n${outUrl}`;
+    return;
+  }
+  let blob = await res.blob();
+  if (!blob.type.startsWith('image/')) blob = new Blob([blob], { type: fallbackMime });
+  rec.blob = blob;
+}
+
+/* ---------- Upscale (Topaz Labs on Replicate) ---------- */
+async function startUpscale() {
+  if (running) return;
+  const token = keyEl.value.trim();
+  if (!token) { toast('Paste your Replicate API token first', true); keyEl.focus(); return; }
+  if (!upSrc) { toast('Add a photo to upscale first', true); return; }
+  const out = upOut(S.up.factor);
+  if (out.mp > TOPAZ_MAX_MP) { toast(`${S.up.factor}x is too large: the output would be over ${TOPAZ_MAX_MP} MP`, true); return; }
+
+  const rec = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    createdAt: Date.now(),
+    kind: 'upscale', provider: 'replicate',
+    model: TOPAZ.id, modelLabel: TOPAZ.label, prompt: '',
+    enhanceModel: S.up.model, factor: S.up.factor + 'x',
+    face: S.up.face ? { strength: S.up.strength, creativity: S.up.creativity } : null,
+    srcBlob: upSrc.blob, srcName: upSrc.name, srcW: upSrc.w, srcH: upSrc.h,
+    expectW: out.w, expectH: out.h,
+  };
+  const ctrl = new AbortController();
+  const card = renderPendingCard(rec, () => ctrl.abort());
+  running = { ctrl, t0: performance.now(), card, upscale: true };
+  running.timer = setInterval(() => {
+    renderStart();
+    const el = card.querySelector('.elapsed');
+    if (el) el.textContent = ((performance.now() - running.t0) / 1000).toFixed(1) + 's';
+  }, 100);
+  renderStart();
+
+  try {
+    await runUpscale(rec, token, ctrl.signal);
+    rec.durationMs = performance.now() - running.t0;
+    rec.status = rec.blob ? 'ok' : 'error';
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      if (rec.predictionId) repFetch(`predictions/${rec.predictionId}/cancel`, token, { method: 'POST' }).catch(() => {});
+      card.remove(); toast('Upscale cancelled'); updateHistCount();
+      return;
+    }
+    rec.status = 'error'; rec.cost = 0;
+    rec.durationMs = performance.now() - running.t0;
+    rec.error = e instanceof GenError ? e.message : 'Unexpected error: ' + (e.message || e);
+  } finally {
+    clearInterval(running.timer);
+    running = null;
+    renderStart();
+  }
+
+  if (rec.status === 'ok') {
+    // Real size from the file header; the preview is made by createImageBitmap's resize, never a full-size canvas.
+    try {
+      const d = await imageSize(rec.blob);
+      rec.width = d.w; rec.height = d.h;
+      rec.cost = topazPrice(d.w * d.h / 1e6) ?? rec.cost;
+      rec.preview = await makeBigThumb(rec.blob, d.w, d.h, PREVIEW_MAX);
+    } catch {
+      rec.width = rec.width || rec.expectW; rec.height = rec.height || rec.expectH; // card falls back to the full image
+    }
+  }
+  rec.cost = rec.cost || 0;
+  if (rec.cost) addCost(rec.cost);
+  try { await db.put(rec); }
+  catch { rec.unsaved = true; } // e.g. quota: keep it on screen for this session only
+  card.replaceWith(renderCard(rec));
+  updateHistCount();
+  if (rec.status === 'ok') openCompare(rec);
+  else if (rec.unsaved) toast('Could not save to history (storage full?)', true, 5000);
+}
+async function runUpscale(rec, token, signal) {
+  // 1. upload the photo. The upload itself isn't aborted, so its id is always known and the
+  //    file can be deleted even when the user cancels mid-upload.
+  const mime = rec.srcBlob.type;
+  const name = `upscale-source.${mime.split('/')[1].replace('jpeg', 'jpg')}`;
+  const fd = new FormData();
+  fd.append('content', rec.srcBlob, name);
+  fd.append('filename', name);
+  fd.append('type', mime);
+  const upload = repFetch('files', token, { method: 'POST', body: fd });
+  const remove = f => repFetch(`files/${f.id}`, token, { method: 'DELETE' }).catch(() => {});
+  let file;
+  try {
+    file = await Promise.race([upload, new Promise((_, rej) => signal.addEventListener('abort',
+      () => rej(new DOMException('Aborted', 'AbortError')), { once: true }))]);
+  } catch (e) { upload.then(remove, () => {}); throw e; }
+
+  try {
+    // 2. create the prediction (schema: replicate.com/topazlabs/image-upscale/api/schema)
+    const format = mime === 'image/jpeg' ? 'jpg' : 'png'; // keep the input's format
+    const input = {
+      image: file.urls.get,
+      enhance_model: rec.enhanceModel,
+      upscale_factor: rec.factor,
+      output_format: format,
+      subject_detection: 'None',
+      face_enhancement: !!rec.face,
+    };
+    if (rec.face) {
+      input.face_enhancement_strength = rec.face.strength;
+      input.face_enhancement_creativity = rec.face.creativity;
+    }
+    let pred = await repFetch(`models/${TOPAZ.id}/predictions`, token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'wait=60' },
+      body: JSON.stringify({ input }), signal,
+    });
+    rec.predictionId = pred.id;
+
+    // 3. poll, 4. download (billed from here on, by output megapixels)
+    pred = await waitForPrediction(pred, token, signal);
+    if (predictionFailed(rec, pred)) return;
+    rec.cost = topazPrice(rec.expectW * rec.expectH / 1e6) || 0;
+    await downloadOutput(rec, pred, format === 'jpg' ? 'image/jpeg' : 'image/png', signal);
+  } finally {
+    remove(file);
   }
 }
 async function persistAndShow(rec, card) {
@@ -1199,7 +1605,10 @@ function objUrl(id, blob) {
 function freeUrls(id) { (urlCache.get(id) || []).forEach(u => URL.revokeObjectURL(u)); urlCache.delete(id); }
 
 function chipsFor(rec) {
-  const chips = [
+  const chips = rec.kind === 'upscale' ? [
+    h('span', { class: 'chip rep' }, 'Replicate'),
+    h('span', { class: 'chip' }, `Topaz · ${rec.enhanceModel} · ${rec.factor}`),
+  ] : [
     rec.provider === 'replicate' ? h('span', { class: 'chip rep' }, 'Replicate') : null,
     h('span', { class: 'chip' }, rec.modelLabel),
     h('span', { class: 'chip' }, rec.imageSize + ' · ' + (QUALITIES.find(q => q.size === rec.imageSize)?.name || '')),
@@ -1213,6 +1622,7 @@ function chipsFor(rec) {
   return h('div', { class: 'chips' }, chips);
 }
 function promptEl_(rec) {
+  if (rec.kind === 'upscale') return h('p', { class: 'card-prompt' }, `Upscale · ${rec.srcName} · ${rec.srcW}×${rec.srcH}`);
   if (!rec.prompt) return h('p', { class: 'card-prompt none' }, '(no prompt — references only)');
   const p = h('p', { class: 'card-prompt', title: 'Click to expand' }, rec.prompt);
   p.onclick = () => p.classList.toggle('expanded');
@@ -1223,7 +1633,9 @@ function refsRow(rec) {
   return h('div', { class: 'card-refs' }, h('span', {}, 'References'),
     rec.refThumbs.map((b, i) => {
       const u = objUrl(rec.id, b);
-      return h('img', { src: u, alt: 'reference ' + (i + 1), loading: 'lazy', onclick: () => openLightbox(u, `Reference ${i + 1} (thumbnail)`) });
+      return h('div', { class: 'card-ref' },
+        h('img', { src: u, alt: 'image ' + (i + 1), loading: 'lazy', onclick: () => openLightbox(u, `Image ${i + 1} (thumbnail)`) }),
+        h('b', { class: 'num' }, i + 1));
     }));
 }
 function modelText(rec) {
@@ -1242,10 +1654,14 @@ function renderCard(rec) {
     chipsFor(rec));
 
   if (rec.status === 'ok') {
-    const img = h('img', { class: 'result-img', src: objUrl(rec.id, rec.preview), alt: rec.prompt || 'generated image', loading: 'lazy',
+    const img = h('img', { class: 'result-img', src: objUrl(rec.id, rec.preview || rec.blob), alt: rec.prompt || 'generated image', loading: 'lazy',
       width: rec.width, height: rec.height, style: `aspect-ratio:${rec.width}/${rec.height}` });
-    img.onclick = () => openLightbox(URL.createObjectURL(rec.blob), `${rec.width}×${rec.height} · ${rec.modelLabel}`, rec, true);
+    img.onclick = rec.kind === 'upscale'
+      ? () => openCompare(rec)
+      : () => openLightbox(URL.createObjectURL(rec.blob), `${rec.width}×${rec.height} · ${rec.modelLabel}`, rec, true);
+    if (rec.kind === 'upscale') img.title = 'Open the before/after comparison';
     card.append(img);
+    if (rec.unsaved) card.append(h('div', { class: 'card-warn' }, UNSAVED_MSG));
   } else if (rec.status === 'error') {
     card.append(h('div', { class: 'err' }, h('b', {}, 'Error'), rec.error));
   }
@@ -1260,13 +1676,13 @@ function renderCard(rec) {
   return card;
 }
 function renderPendingCard(rec, onCancel) {
-  const ratio = rec.aspectRatio === 'auto' ? '1/1' : rec.aspectRatio.replace(':', '/');
+  const ratio = rec.kind === 'upscale' ? `${rec.srcW}/${rec.srcH}` : rec.aspectRatio === 'auto' ? '1/1' : rec.aspectRatio.replace(':', '/');
   const card = h('article', { class: 'card pending' },
     h('header', { class: 'card-head' }, promptEl_(rec),
       h('div', { class: 'card-actions' }, h('button', { class: 'text-btn', type: 'button', onclick: onCancel }, 'Cancel'))),
     chipsFor(rec),
     h('div', { class: 'pending-box', style: `aspect-ratio:${ratio};max-height:420px` },
-      h('div', { class: 'pending-inner' }, h('span', { class: 'spinner' }), h('span', { class: 'elapsed' }, '0.0s'), h('span', {}, 'Generating…'))));
+      h('div', { class: 'pending-inner' }, h('span', { class: 'spinner' }), h('span', { class: 'elapsed' }, '0.0s'), h('span', {}, rec.kind === 'upscale' ? 'Upscaling…' : 'Generating…'))));
   const rr = refsRow(rec); if (rr) card.append(rr);
   feed.querySelector('.empty')?.remove();
   feed.prepend(card);
@@ -1312,11 +1728,94 @@ $('lightbox').addEventListener('click', e => { if (e.target === $('lightbox')) c
 $('lbClose').onclick = closeLightbox;
 $('lbDownload').onclick = () => lbRec && downloadRecord(lbRec);
 
+/* before/after viewer (upscale): the original is stretched to the result's displayed size and
+   clipped to the left of the divider; both layers live in one stage, so they pan together. */
+const UNSAVED_MSG = "Couldn't save this result to history (browser storage full?). It's only on this page: download it before you close or reload.";
+const cmp = { rec: null, fit: true, scale: 1, tx: 0, ty: 0, split: 0.5, urls: [] };
+$('cmpClose').innerHTML = ICON.xl;
+$('cmpDownload').innerHTML = ICON.download;
+function openCompare(rec) {
+  closeCompare();
+  closeLightbox();
+  Object.assign(cmp, { rec, fit: true, split: 0.5, urls: [URL.createObjectURL(rec.blob), URL.createObjectURL(rec.srcBlob)] });
+  $('cmpAfter').src = cmp.urls[0];
+  $('cmpBefore').src = cmp.urls[1];
+  $('cmpMeta').textContent = `${rec.srcW}×${rec.srcH} → ${rec.width}×${rec.height} · Topaz · ${rec.enhanceModel} · ${rec.factor}`;
+  $('cmpMsg').hidden = !rec.unsaved;
+  $('cmpMsg').textContent = rec.unsaved ? UNSAVED_MSG : '';
+  $('cmp').hidden = false;
+  layoutCompare(true);
+}
+function closeCompare() {
+  if ($('cmp').hidden) return;
+  $('cmp').hidden = true;
+  $('cmpAfter').removeAttribute('src'); $('cmpBefore').removeAttribute('src');
+  cmp.urls.forEach(u => URL.revokeObjectURL(u));
+  cmp.urls = []; cmp.rec = null;
+}
+// recenter: center the image; otherwise keep the point under the view's center while the scale changes.
+function layoutCompare(recenter) {
+  const r = cmp.rec; if (!r) return;
+  const view = $('cmpView'), vw = view.clientWidth, vh = view.clientHeight;
+  const s = cmp.fit ? Math.min(1, vw / r.width, vh / r.height) : 1;
+  if (!recenter && s !== cmp.scale) {
+    cmp.tx = vw / 2 - (vw / 2 - cmp.tx) * s / cmp.scale;
+    cmp.ty = vh / 2 - (vh / 2 - cmp.ty) * s / cmp.scale;
+  }
+  cmp.scale = s;
+  const w = r.width * s, hh = r.height * s;
+  // smaller than the view → centered; larger → no empty margin can be dragged in
+  const clampTo = (t, size, viewSize) => size <= viewSize ? (viewSize - size) / 2 : Math.min(0, Math.max(viewSize - size, t));
+  cmp.tx = clampTo(recenter ? (vw - w) / 2 : cmp.tx, w, vw);
+  cmp.ty = clampTo(recenter ? (vh - hh) / 2 : cmp.ty, hh, vh);
+  const st = $('cmpStage').style;
+  st.width = w + 'px'; st.height = hh + 'px';
+  st.transform = `translate(${cmp.tx}px, ${cmp.ty}px)`;
+  view.classList.toggle('pannable', w > vw || hh > vh);
+  $('cmpZoom').querySelectorAll('button').forEach(b => b.classList.toggle('sel', (b.dataset.zoom === 'fit') === cmp.fit));
+  drawSplit();
+}
+function drawSplit() {
+  const x = cmp.split * $('cmpView').clientWidth;
+  $('cmpDiv').style.left = x + 'px';
+  const w = cmp.rec.width * cmp.scale;
+  $('cmpBefore').style.clipPath = `inset(0 ${Math.max(0, w - (x - cmp.tx))}px 0 0)`;
+}
+$('cmpZoom').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  cmp.fit = b.dataset.zoom === 'fit';
+  layoutCompare(false);
+});
+// Drag the divider (or anywhere, when the image fits the view); otherwise drag to pan.
+$('cmpView').addEventListener('pointerdown', e => {
+  if (!cmp.rec || e.button !== 0) return;
+  const view = $('cmpView');
+  const pan = !e.target.closest('#cmpDiv') && view.classList.contains('pannable');
+  const x0 = e.clientX, y0 = e.clientY, tx0 = cmp.tx, ty0 = cmp.ty;
+  const move = ev => {
+    if (pan) { cmp.tx = tx0 + ev.clientX - x0; cmp.ty = ty0 + ev.clientY - y0; layoutCompare(false); }
+    else {
+      const r = view.getBoundingClientRect();
+      cmp.split = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+      drawSplit();
+    }
+  };
+  const end = () => { view.removeEventListener('pointermove', move); view.removeEventListener('pointerup', end); view.removeEventListener('pointercancel', end); };
+  view.setPointerCapture(e.pointerId);
+  view.addEventListener('pointermove', move);
+  view.addEventListener('pointerup', end);
+  view.addEventListener('pointercancel', end);
+  if (!pan) move(e);
+});
+window.addEventListener('resize', () => { if (cmp.rec) layoutCompare(false); });
+$('cmpClose').onclick = closeCompare;
+$('cmpDownload').onclick = () => cmp.rec && downloadRecord(cmp.rec);
+
 /* =====================================================================
    INIT
    ===================================================================== */
-function renderAll() { renderProvider(); renderModel(); renderRatio(); renderQuality(); renderFormat(); renderRefs(); renderCost(); }
-renderKey(); renderAll(); renderCount(); renderStart(); renderFolder();
+function renderAll() { renderMode(); renderProvider(); renderModel(); renderRatio(); renderQuality(); renderFormat(); renderRefs(); renderUpscale(); renderCost(); renderStart(); }
+renderKey(); renderAll(); renderCount(); renderFolder();
 loadHistory();
 (async () => {
   if (!fsSupported) return;
